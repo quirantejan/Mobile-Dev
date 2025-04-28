@@ -1,3 +1,7 @@
 <resources>
-    <string name="app_name">SmartechMobileDev</string>
+    <string name="app_name">SMARTECH</string>
+    <string name="signup_text">
+    Don&#39;t have an account? <font color="#000000">Sign up</font></string>
+    <string name="login_text">
+    Already have an account? <font color="#000000">Sign up</font></string>
 </resources>
