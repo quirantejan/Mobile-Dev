@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">SMARTECH</string>
+    <string name="signup_text">
+        Don\'t have an account? <font color="#000000">Sign up</font>
+    </string>
+    <string name="login_text">
+        Already have an account? <font color="#000000">Log in</font>
+    </string>
+</resources>
