@@ -5,16 +5,6 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".RegisterVoicePasskey"
-    android:background="@drawable/background">
-
-
-    <com.airbnb.lottie.LottieAnimationView
-        android:id="@+id/lottieAnimationView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:lottie_autoPlay="true"
-        app:lottie_loop="true"/>
-
+    tools:context=".registerName">
 
 </androidx.constraintlayout.widget.ConstraintLayout>
