@@ -10,23 +10,17 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.airbnb.lottie.LottieAnimationView;
-
-public class RegisterVoicePasskey extends AppCompatActivity {
+public class RegisterName extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
-        setContentView(R.layout.activity_register_voice_passkey);
-
-        LottieAnimationView animationView = findViewById(R.id.lottieAnimationView);
-        animationView.setAnimation(R.raw.mic);
-        animationView.playAnimation();
+        setContentView(R.layout.activity_register_name);
 
         View mainLayout = findViewById(R.id.main);
         mainLayout.setOnClickListener(v -> {
-            Intent intent = new Intent(RegisterVoicePasskey.this, RegisterName.class);
+            Intent intent = new Intent(RegisterName.this, Welcome.class);
             startActivity(intent);
         });
 

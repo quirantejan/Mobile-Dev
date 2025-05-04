@@ -13,7 +13,13 @@
         android:theme="@style/Theme.Smartech"
         tools:targetApi="31">
         <activity
-            android:name=".registerName"
+            android:name=".Homepage"
+            android:exported="false" />
+        <activity
+            android:name=".Welcome"
+            android:exported="false" />
+        <activity
+            android:name=".RegisterName"
             android:exported="false" />
         <activity
             android:name=".RegisterVoicePasskey"
