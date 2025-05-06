@@ -8,33 +8,49 @@
     tools:context=".Homepage"
     android:background="@drawable/background">
 
-
     <LinearLayout
-        android:layout_width="417dp"
-        android:layout_height="437dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <ImageView
-            android:id="@+id/imageView4"
-            android:layout_margin="20dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:srcCompat="@drawable/dailyplanner" />
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/dailyplanner"
+            android:layout_width="match_parent"
+            android:layout_height="90dp"
+            android:layout_margin="10dp"
+            android:text="Daily Planner"
+            android:textAllCaps="false"
+            android:textSize="34sp"
+            android:background="@drawable/rounded_button"
+            android:textColor="#000000" />
 
-        <ImageView
-            android:id="@+id/imageView6"
-            android:layout_width="wrap_content"
-            android:layout_margin="20dp"
-            android:layout_height="wrap_content"
-            app:srcCompat="@drawable/objectrecognition" />
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/objectrecognition"
+            android:layout_width="match_parent"
+            android:layout_height="90dp"
+            android:layout_margin="10dp"
+            android:text="Object Recognition"
+            android:textSize="34sp"
+            android:textAllCaps="false"
 
-        <ImageView
-            android:id="@+id/imageView7"
-            android:layout_margin="20dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:srcCompat="@drawable/emergency" />
+            android:background="@drawable/rounded_button"
+            android:textColor="#000000" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/emergency"
+            android:layout_width="match_parent"
+            android:layout_height="90dp"
+            android:layout_margin="10dp"
+            android:text="Emergency"
+            android:textAllCaps="false"
+
+            android:textSize="34sp"
+            android:background="@drawable/rounded_button"
+            android:textColor="#000000" />
+
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
