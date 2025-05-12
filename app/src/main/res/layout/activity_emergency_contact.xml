@@ -13,7 +13,6 @@
         android:orientation="vertical"
         android:gravity="center_horizontal">
 
-        <!-- Card for Emergency Contacts -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -27,7 +26,6 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
-                <!-- Emergency Contacts Title Inside Card -->
                 <TextView
                     android:id="@+id/emergencyContactTitle"
                     android:layout_width="wrap_content"
@@ -38,25 +36,41 @@
                     android:textColor="#272477"
                     android:layout_marginBottom="12dp" />
 
-                <!-- Container for Emergency Contact Fields -->
                 <LinearLayout
                     android:id="@+id/emergencyContactsContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical" />
 
-                <!-- Add Contact Button -->
-                <Button
-                    android:id="@+id/addContactButton"
-                    android:layout_width="wrap_content"
+                <!-- Horizontal LinearLayout for Add and Remove Buttons -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Add Another Contact"
-                    android:backgroundTint="#2D4FB2"
-                    android:textColor="#FFFFFF"
-                    android:layout_gravity="end"
-                    android:layout_marginBottom="16dp"/>
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginBottom="16dp">
 
-                <!-- Done Button Inside Card -->
+                    <Button
+                        android:id="@+id/addContactButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:text="Add Another Contact"
+                        android:backgroundTint="#2D4FB2"
+                        android:textColor="#FFFFFF"
+                        android:layout_weight="1"
+                        android:minHeight="48dp" />
+
+                    <Button
+                        android:id="@+id/removeContactButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:text="Remove Contact"
+                        android:backgroundTint="#AAAAAA"
+                        android:textColor="#FFFFFF"
+                        android:layout_weight="1"
+                        android:minHeight="48dp" />
+                </LinearLayout>
+
                 <Button
                     android:id="@+id/doneButton"
                     android:layout_width="match_parent"

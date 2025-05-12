@@ -1,6 +1,8 @@
 package com.example.smartech;
 
 import android.content.Intent;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.View;
@@ -8,6 +10,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -26,6 +29,7 @@ public class EmergencyContactActivity extends AppCompatActivity {
 
     private LinearLayout emergencyContactsContainer;
     private Button addContactButton;
+    private Button removeContactButton;
     private Button doneButton;
 
     private FirebaseAuth mAuth;
@@ -41,10 +45,13 @@ public class EmergencyContactActivity extends AppCompatActivity {
 
         emergencyContactsContainer = findViewById(R.id.emergencyContactsContainer);
         addContactButton = findViewById(R.id.addContactButton);
+        removeContactButton = findViewById(R.id.removeContactButton);
         doneButton = findViewById(R.id.doneButton);
 
+        // Initial contact field
         addInitialContactField();
 
+        // Button to add a new contact field
         addContactButton.setOnClickListener(v -> {
             if (validateLastContact() && contactCount < MAX_CONTACTS) {
                 addNewContactField();
@@ -53,11 +60,23 @@ public class EmergencyContactActivity extends AppCompatActivity {
             }
         });
 
+        // Button to save all contacts to Firestore
         doneButton.setOnClickListener(v -> {
             if (validateLastContact()) {
                 saveContactsToFirestore();
             }
         });
+
+        // Button to remove the most recent contact
+        removeContactButton.setOnClickListener(v -> {
+            if (contactCount > 1) {
+                removeLastContactField();
+            }
+        });
+
+        // Disable remove button when there's only one contact
+        removeContactButton.setEnabled(false);
+        removeContactButton.setBackgroundTintList(getColorStateList(android.R.color.darker_gray));
     }
 
     private void addInitialContactField() {
@@ -67,9 +86,19 @@ public class EmergencyContactActivity extends AppCompatActivity {
     private void addNewContactField() {
         contactCount++;
         addContactField();
+        updateRemoveButtonState();
     }
 
     private void addContactField() {
+        // Add number label
+        TextView numberLabel = new TextView(this);
+        numberLabel.setText(String.valueOf(contactCount));
+        numberLabel.setTextSize(16);
+        numberLabel.setTextColor(getColor(R.color.black)); // Change to your desired color
+        numberLabel.setPadding(0, 8, 0, 4);
+        emergencyContactsContainer.addView(numberLabel);
+
+        // Name row with first and last name
         LinearLayout nameRow = new LinearLayout(this);
         nameRow.setOrientation(LinearLayout.HORIZONTAL);
         nameRow.setLayoutParams(new LinearLayout.LayoutParams(
@@ -100,6 +129,7 @@ public class EmergencyContactActivity extends AppCompatActivity {
         nameRow.addView(firstName);
         nameRow.addView(lastName);
 
+        // Email input
         EditText emailEditText = new EditText(this);
         emailEditText.setHint("Contact Email");
         emailEditText.setInputType(InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
@@ -112,6 +142,7 @@ public class EmergencyContactActivity extends AppCompatActivity {
         lpEmail.setMargins(0, 8, 0, 16);
         emailEditText.setLayoutParams(lpEmail);
 
+        // Add to the container
         emergencyContactsContainer.addView(nameRow);
         emergencyContactsContainer.addView(emailEditText);
     }
@@ -158,11 +189,22 @@ public class EmergencyContactActivity extends AppCompatActivity {
         String userId = mAuth.getCurrentUser().getUid();
         ArrayList<Map<String, String>> contactsList = new ArrayList<>();
 
+        // Iterate through only the name and email rows
         for (int i = 0; i < contactCount; i++) {
-            LinearLayout nameRow = (LinearLayout) emergencyContactsContainer.getChildAt(i * 2);
+            // Skip the number label (TextView), as it's not part of the name/email rows
+            int nameRowIndex = i * 2;
+            int emailIndex = i * 2 + 1;
+
+            // Ensure the views are of correct types
+            if (!(emergencyContactsContainer.getChildAt(nameRowIndex) instanceof LinearLayout)) {
+                continue; // Skip if the view is not a LinearLayout
+            }
+
+            LinearLayout nameRow = (LinearLayout) emergencyContactsContainer.getChildAt(nameRowIndex);
             EditText firstName = (EditText) nameRow.getChildAt(0);
             EditText secondName = (EditText) nameRow.getChildAt(1);
-            EditText email = (EditText) emergencyContactsContainer.getChildAt(i * 2 + 1);
+
+            EditText email = (EditText) emergencyContactsContainer.getChildAt(emailIndex);
 
             Map<String, String> contact = new HashMap<>();
             contact.put("firstName", firstName.getText().toString().trim());
@@ -181,5 +223,29 @@ public class EmergencyContactActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> {
                     Toast.makeText(EmergencyContactActivity.this, "Error saving contacts: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
+    }
+
+
+    private void removeLastContactField() {
+        if (contactCount <= 1) return;
+
+        // Remove the number label, name row, and email
+        for (int i = 0; i < 3; i++) {
+            emergencyContactsContainer.removeViewAt(emergencyContactsContainer.getChildCount() - 1);
+        }
+
+        contactCount--;
+        updateRemoveButtonState();
+    }
+
+    private void updateRemoveButtonState() {
+        if (contactCount <= 1) {
+            removeContactButton.setEnabled(false);
+            removeContactButton.setBackgroundTintList(getColorStateList(android.R.color.darker_gray));
+        } else {
+            removeContactButton.setEnabled(true);
+            removeContactButton.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#2D4FB2"))); // Use hex color code
+            // Replace with your primary color
+        }
     }
 }
