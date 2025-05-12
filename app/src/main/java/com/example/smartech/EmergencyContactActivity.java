@@ -189,42 +189,48 @@ public class EmergencyContactActivity extends AppCompatActivity {
         String userId = mAuth.getCurrentUser().getUid();
         ArrayList<Map<String, String>> contactsList = new ArrayList<>();
 
-        // Iterate through only the name and email rows
-        for (int i = 0; i < contactCount; i++) {
-            // Skip the number label (TextView), as it's not part of the name/email rows
-            int nameRowIndex = i * 2;
-            int emailIndex = i * 2 + 1;
+        int childIndex = 0;
 
-            // Ensure the views are of correct types
-            if (!(emergencyContactsContainer.getChildAt(nameRowIndex) instanceof LinearLayout)) {
-                continue; // Skip if the view is not a LinearLayout
+        for (int i = 0; i < contactCount; i++) {
+            // Skip number label (TextView)
+            childIndex++; // this skips the label
+
+            if (childIndex + 1 >= emergencyContactsContainer.getChildCount()) break;
+
+            View nameRowView = emergencyContactsContainer.getChildAt(childIndex);
+            View emailView = emergencyContactsContainer.getChildAt(childIndex + 1);
+
+            if (!(nameRowView instanceof LinearLayout) || !(emailView instanceof EditText)) {
+                childIndex += 2;
+                continue;
             }
 
-            LinearLayout nameRow = (LinearLayout) emergencyContactsContainer.getChildAt(nameRowIndex);
+            LinearLayout nameRow = (LinearLayout) nameRowView;
             EditText firstName = (EditText) nameRow.getChildAt(0);
-            EditText secondName = (EditText) nameRow.getChildAt(1);
-
-            EditText email = (EditText) emergencyContactsContainer.getChildAt(emailIndex);
+            EditText lastName = (EditText) nameRow.getChildAt(1);
+            EditText email = (EditText) emailView;
 
             Map<String, String> contact = new HashMap<>();
             contact.put("firstName", firstName.getText().toString().trim());
-            contact.put("lastName", secondName.getText().toString().trim());
+            contact.put("lastName", lastName.getText().toString().trim());
             contact.put("email", email.getText().toString().trim());
 
             contactsList.add(contact);
+
+            childIndex += 2;
         }
 
         db.collection("users").document(userId).update("emergencyContacts", contactsList)
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(EmergencyContactActivity.this, "Contacts saved successfully!", Toast.LENGTH_SHORT).show();
-                    startActivity(new Intent(EmergencyContactActivity.this, HomeActivity.class));
+                    // Navigate to LoginActivity instead of HomeActivity
+                    startActivity(new Intent(EmergencyContactActivity.this, LoginActivity.class));
                     finish();
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(EmergencyContactActivity.this, "Error saving contacts: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
-
 
     private void removeLastContactField() {
         if (contactCount <= 1) return;
