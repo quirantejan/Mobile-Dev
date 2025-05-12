@@ -15,7 +15,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.airbnb.lottie.LottieAnimationView;
 
-public class DailyPlannerActivity extends AppCompatActivity {
+public class HelpActivity extends AppCompatActivity {
 
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 1;
     private VoiceAssistantHelper voiceAssistantHelper;
@@ -26,7 +26,7 @@ public class DailyPlannerActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_daily_planner);
+        setContentView(R.layout.activity_help);
 
         micAnimation = findViewById(R.id.micAnimation);
         recognizedText = findViewById(R.id.recognizedText);

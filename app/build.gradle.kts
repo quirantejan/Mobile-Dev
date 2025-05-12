@@ -39,6 +39,8 @@ dependencies {
     implementation(libs.activity)
     implementation(libs.constraintlayout)
     implementation(libs.cardview)
+    implementation("com.airbnb.android:lottie:5.0.3")
+
 
     // Firebase BoM and Authentication
     implementation(platform("com.google.firebase:firebase-bom:33.13.0"))
