@@ -7,6 +7,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.speech.tts.TextToSpeech;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.TextView;
@@ -16,6 +17,11 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.airbnb.lottie.LottieAnimationView;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.auth.FirebaseAuth;
+import java.util.Locale;
+import java.util.Map;
+import java.util.ArrayList;
 
 public class HomeActivity extends AppCompatActivity {
 
@@ -24,6 +30,9 @@ public class HomeActivity extends AppCompatActivity {
     private LottieAnimationView micAnimation;
     private TextView recognizedText;
     private ConstraintLayout mainLayout;
+    private TextToSpeech textToSpeech;
+    private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,13 +42,25 @@ public class HomeActivity extends AppCompatActivity {
         micAnimation = findViewById(R.id.micAnimation);
         recognizedText = findViewById(R.id.recognizedText);
         mainLayout = findViewById(R.id.main);
+        mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
 
-        // Check for permissions and request if not granted
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO},
                     REQUEST_RECORD_AUDIO_PERMISSION);
         }
+
+        textToSpeech = new TextToSpeech(this, status -> {
+            if (status == TextToSpeech.SUCCESS) {
+                int langResult = textToSpeech.setLanguage(Locale.US);
+                if (langResult == TextToSpeech.LANG_MISSING_DATA || langResult == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    Toast.makeText(HomeActivity.this, "Language not supported", Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                Toast.makeText(HomeActivity.this, "TextToSpeech initialization failed", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         voiceAssistantHelper = new VoiceAssistantHelper(this, new VoiceAssistantHelper.Listener() {
             @Override
@@ -95,7 +116,38 @@ public class HomeActivity extends AppCompatActivity {
             startActivity(new Intent(this, EmergencyActivity.class));
         } else if (command.contains("help")) {
             startActivity(new Intent(this, HelpActivity.class));
+        }else if (command.contains("who are my contacts")) {
+                getEmergencyContacts();
+            }
         }
+
+    private void getEmergencyContacts() {
+        String userId = mAuth.getCurrentUser().getUid();
+
+        db.collection("users").document(userId).get().addOnSuccessListener(documentSnapshot -> {
+            if (documentSnapshot.exists()) {
+                if (documentSnapshot.contains("emergencyContacts")) {
+                    ArrayList<Map<String, String>> emergencyContacts = (ArrayList<Map<String, String>>) documentSnapshot.get("emergencyContacts");
+                    StringBuilder response = new StringBuilder();
+
+                    response.append("You have ").append(emergencyContacts.size()).append(" emergency contacts. ");
+
+                    for (int i = 0; i < emergencyContacts.size(); i++) {
+                        Map<String, String> contact = emergencyContacts.get(i);
+                        String firstName = contact.get("firstName");
+                        String lastName = contact.get("lastName");
+                        response.append(i + 1).append(" is ").append(firstName).append(" ").append(lastName);
+                        if (i < emergencyContacts.size() - 1) {
+                            response.append(", ");
+                        }
+                    }
+
+                    textToSpeech.speak(response.toString(), TextToSpeech.QUEUE_FLUSH, null, null);
+                }
+            }
+        }).addOnFailureListener(e -> {
+            Toast.makeText(HomeActivity.this, "Error fetching emergency contacts", Toast.LENGTH_SHORT).show();
+        });
     }
 
     @Override
@@ -106,5 +158,14 @@ public class HomeActivity extends AppCompatActivity {
                 Toast.makeText(this, "Permission denied to record audio", Toast.LENGTH_SHORT).show();
             }
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (textToSpeech != null) {
+            textToSpeech.stop();
+            textToSpeech.shutdown();
+        }
+        super.onDestroy();
     }
 }
