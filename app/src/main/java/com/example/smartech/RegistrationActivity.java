@@ -23,6 +23,8 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -59,22 +61,10 @@ public class RegistrationActivity extends AppCompatActivity {
         registerButton.setOnClickListener(v -> {
             if (validateInputs()) {
                 String email = emailEditText.getText().toString().trim();
-                String password = passwordEditText.getText().toString();
+                String username = usernameEditText.getText().toString().trim();
 
-                mAuth.createUserWithEmailAndPassword(email, password).addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        // Save user info to Firestore
-                        String userId = mAuth.getCurrentUser().getUid();
-                        saveUserToFirestore(userId);
-
-                        Toast.makeText(this, "Registered successfully!", Toast.LENGTH_SHORT).show();
-                        Intent intent = new Intent(RegistrationActivity.this, EmergencyContactActivity.class);
-                        startActivity(intent);
-                        finish();
-                    } else {
-                        Toast.makeText(this, "Registration failed: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
-                    }
-                });
+                // Check if email or username already exists
+                checkIfUserExists(email, username);
             }
         });
 
@@ -102,11 +92,55 @@ public class RegistrationActivity extends AppCompatActivity {
         loginTextView.setHighlightColor(Color.TRANSPARENT);
     }
 
-    private void saveUserToFirestore(String userId) {
-        String username = usernameEditText.getText().toString().trim();
+    private void checkIfUserExists(String email, String username) {
+        // Check if email or username already exists in Firestore
+        db.collection("users")
+                .whereEqualTo("email", email)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful() && !task.getResult().isEmpty()) {
+                        // Email already exists
+                        emailEditText.setError("Email is already in use.");
+                    } else {
+                        // Check username
+                        db.collection("users")
+                                .whereEqualTo("username", username)
+                                .get()
+                                .addOnCompleteListener(usernameTask -> {
+                                    if (usernameTask.isSuccessful() && !usernameTask.getResult().isEmpty()) {
+                                        // Username already exists
+                                        usernameEditText.setError("Username is already taken.");
+                                    } else {
+                                        // Proceed with registration if no duplicates
+                                        registerUser(email, username);
+                                    }
+                                });
+                    }
+                });
+    }
+
+    private void registerUser(String email, String username) {
+        String password = passwordEditText.getText().toString();
+
+        mAuth.createUserWithEmailAndPassword(email, password).addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                // Save user info to Firestore
+                String userId = mAuth.getCurrentUser().getUid();
+                saveUserToFirestore(userId, email, username);
+
+                Toast.makeText(this, "Registered successfully!", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(RegistrationActivity.this, EmergencyContactActivity.class);
+                startActivity(intent);
+                finish();
+            } else {
+                Toast.makeText(this, "Registration failed: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void saveUserToFirestore(String userId, String email, String username) {
         String firstName = firstNameEditText.getText().toString().trim();
         String lastName = lastNameEditText.getText().toString().trim();
-        String email = emailEditText.getText().toString().trim();
 
         User user = new User(userId, username, firstName, lastName, email);
 
@@ -168,7 +202,7 @@ public class RegistrationActivity extends AppCompatActivity {
         public String email;
 
         public User() {
-            // Default constructor required for Firestore
+
         }
 
         public User(String userId, String username, String firstName, String lastName, String email) {
