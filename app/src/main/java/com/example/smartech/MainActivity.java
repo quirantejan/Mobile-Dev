@@ -12,16 +12,14 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Initialize Firebase
         FirebaseApp.initializeApp(this);
 
         setContentView(R.layout.splash_screen);
 
-        // Delay for a few seconds before starting the LoginActivity
         new Handler().postDelayed(() -> {
             Intent intent = new Intent(MainActivity.this, LoginActivity.class);
             startActivity(intent);
             finish();
-        }, 3000); // Duration in milliseconds
+        }, 1500);
     }
 }
