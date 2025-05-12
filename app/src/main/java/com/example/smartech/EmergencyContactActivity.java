@@ -12,6 +12,13 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
 public class EmergencyContactActivity extends AppCompatActivity {
 
     private static final int MAX_CONTACTS = 5;
@@ -21,10 +28,16 @@ public class EmergencyContactActivity extends AppCompatActivity {
     private Button addContactButton;
     private Button doneButton;
 
+    private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_emergency_contact);
+
+        mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
 
         emergencyContactsContainer = findViewById(R.id.emergencyContactsContainer);
         addContactButton = findViewById(R.id.addContactButton);
@@ -41,9 +54,9 @@ public class EmergencyContactActivity extends AppCompatActivity {
         });
 
         doneButton.setOnClickListener(v -> {
-            Intent intent = new Intent(EmergencyContactActivity.this, HomeActivity.class);
-            startActivity(intent);
-            finish();
+            if (validateLastContact()) {
+                saveContactsToFirestore();
+            }
         });
     }
 
@@ -139,5 +152,34 @@ public class EmergencyContactActivity extends AppCompatActivity {
         }
 
         return true;
+    }
+
+    private void saveContactsToFirestore() {
+        String userId = mAuth.getCurrentUser().getUid();
+        ArrayList<Map<String, String>> contactsList = new ArrayList<>();
+
+        for (int i = 0; i < contactCount; i++) {
+            LinearLayout nameRow = (LinearLayout) emergencyContactsContainer.getChildAt(i * 2);
+            EditText firstName = (EditText) nameRow.getChildAt(0);
+            EditText secondName = (EditText) nameRow.getChildAt(1);
+            EditText email = (EditText) emergencyContactsContainer.getChildAt(i * 2 + 1);
+
+            Map<String, String> contact = new HashMap<>();
+            contact.put("firstName", firstName.getText().toString().trim());
+            contact.put("lastName", secondName.getText().toString().trim());
+            contact.put("email", email.getText().toString().trim());
+
+            contactsList.add(contact);
+        }
+
+        db.collection("users").document(userId).update("emergencyContacts", contactsList)
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(EmergencyContactActivity.this, "Contacts saved successfully!", Toast.LENGTH_SHORT).show();
+                    startActivity(new Intent(EmergencyContactActivity.this, HomeActivity.class));
+                    finish();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(EmergencyContactActivity.this, "Error saving contacts: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
     }
 }

@@ -56,7 +56,6 @@ public class RegistrationActivity extends AppCompatActivity {
         passwordEditText = findViewById(R.id.passwordEditText);
         confirmPasswordEditText = findViewById(R.id.confirmPasswordEditText);
         registerButton = findViewById(R.id.registerButton);
-        addTestDataToFirestore();
         registerButton.setOnClickListener(v -> {
             if (validateInputs()) {
                 String email = emailEditText.getText().toString().trim();
@@ -179,28 +178,6 @@ public class RegistrationActivity extends AppCompatActivity {
             this.lastName = lastName;
             this.email = email;
         }
-    }
-    // Example method to test adding data to Firestore
-    private void addTestDataToFirestore() {
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
-
-        // Create a new document in the "test_users" collection
-        Map<String, Object> user = new HashMap<>();
-        user.put("firstName", "John");
-        user.put("lastName", "Doe");
-        user.put("email", "john.doe@example.com");
-
-        // Add the data to Firestore
-        db.collection("test_users")
-                .add(user)
-                .addOnSuccessListener(documentReference -> {
-                    // Document was added successfully
-                    Log.d("Firestore", "DocumentSnapshot successfully written with ID: " + documentReference.getId());
-                })
-                .addOnFailureListener(e -> {
-                    // Error occurred
-                    Log.w("Firestore", "Error writing document", e);
-                });
     }
 
 }
