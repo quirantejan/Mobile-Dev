@@ -8,6 +8,7 @@ import android.text.Spanned;
 import android.text.TextPaint;
 import android.text.method.LinkMovementMethod;
 import android.text.style.ClickableSpan;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -20,10 +21,18 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
+
+import java.util.HashMap;
+import java.util.Map;
+
 public class RegistrationActivity extends AppCompatActivity {
 
     private EditText usernameEditText, firstNameEditText, lastNameEditText, emailEditText, passwordEditText, confirmPasswordEditText;
     private Button registerButton;
+    private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,6 +46,9 @@ public class RegistrationActivity extends AppCompatActivity {
             return insets;
         });
 
+        mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
+
         usernameEditText = findViewById(R.id.usernameEditText);
         firstNameEditText = findViewById(R.id.firstNameEditText);
         lastNameEditText = findViewById(R.id.lastNameEditText);
@@ -44,16 +56,26 @@ public class RegistrationActivity extends AppCompatActivity {
         passwordEditText = findViewById(R.id.passwordEditText);
         confirmPasswordEditText = findViewById(R.id.confirmPasswordEditText);
         registerButton = findViewById(R.id.registerButton);
-
+        addTestDataToFirestore();
         registerButton.setOnClickListener(v -> {
             if (validateInputs()) {
-                // Proceed with registration logic
-                Toast.makeText(this, "Registered successfully!", Toast.LENGTH_SHORT).show();
+                String email = emailEditText.getText().toString().trim();
+                String password = passwordEditText.getText().toString();
 
-                // After successful registration, navigate to EmergencyContactActivity
-                Intent intent = new Intent(RegistrationActivity.this, EmergencyContactActivity.class);
-                startActivity(intent);
-                finish();  // Optional: finish the current activity to prevent the user from going back
+                mAuth.createUserWithEmailAndPassword(email, password).addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        // Save user info to Firestore
+                        String userId = mAuth.getCurrentUser().getUid();
+                        saveUserToFirestore(userId);
+
+                        Toast.makeText(this, "Registered successfully!", Toast.LENGTH_SHORT).show();
+                        Intent intent = new Intent(RegistrationActivity.this, EmergencyContactActivity.class);
+                        startActivity(intent);
+                        finish();
+                    } else {
+                        Toast.makeText(this, "Registration failed: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                });
             }
         });
 
@@ -79,6 +101,23 @@ public class RegistrationActivity extends AppCompatActivity {
         loginTextView.setText(spannableString);
         loginTextView.setMovementMethod(LinkMovementMethod.getInstance());
         loginTextView.setHighlightColor(Color.TRANSPARENT);
+    }
+
+    private void saveUserToFirestore(String userId) {
+        String username = usernameEditText.getText().toString().trim();
+        String firstName = firstNameEditText.getText().toString().trim();
+        String lastName = lastNameEditText.getText().toString().trim();
+        String email = emailEditText.getText().toString().trim();
+
+        User user = new User(userId, username, firstName, lastName, email);
+
+        db.collection("users").document(userId).set(user)
+                .addOnSuccessListener(aVoid -> {
+                    // Successfully added user data
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(RegistrationActivity.this, "Error saving user: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
     }
 
     private boolean validateInputs() {
@@ -121,4 +160,47 @@ public class RegistrationActivity extends AppCompatActivity {
 
         return true;
     }
+
+    public static class User {
+        public String userId;
+        public String username;
+        public String firstName;
+        public String lastName;
+        public String email;
+
+        public User() {
+            // Default constructor required for Firestore
+        }
+
+        public User(String userId, String username, String firstName, String lastName, String email) {
+            this.userId = userId;
+            this.username = username;
+            this.firstName = firstName;
+            this.lastName = lastName;
+            this.email = email;
+        }
+    }
+    // Example method to test adding data to Firestore
+    private void addTestDataToFirestore() {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        // Create a new document in the "test_users" collection
+        Map<String, Object> user = new HashMap<>();
+        user.put("firstName", "John");
+        user.put("lastName", "Doe");
+        user.put("email", "john.doe@example.com");
+
+        // Add the data to Firestore
+        db.collection("test_users")
+                .add(user)
+                .addOnSuccessListener(documentReference -> {
+                    // Document was added successfully
+                    Log.d("Firestore", "DocumentSnapshot successfully written with ID: " + documentReference.getId());
+                })
+                .addOnFailureListener(e -> {
+                    // Error occurred
+                    Log.w("Firestore", "Error writing document", e);
+                });
+    }
+
 }

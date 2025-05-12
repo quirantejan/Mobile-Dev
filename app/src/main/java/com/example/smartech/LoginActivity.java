@@ -20,39 +20,47 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.DocumentSnapshot;
+
 public class LoginActivity extends AppCompatActivity {
 
     private EditText emailEditText, passwordEditText;
     private Button loginButton;
     private TextView incorrectPasswordTextView, invalidEmailTextView;
+    private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_login);
+
+        // Edge to edge support for system bars
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
 
-        // Initialize views
+        mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
+
         emailEditText = findViewById(R.id.emailEditText);
         passwordEditText = findViewById(R.id.passwordEditText);
         loginButton = findViewById(R.id.loginButton);
         incorrectPasswordTextView = findViewById(R.id.incorrectPasswordTextView);
-        invalidEmailTextView = findViewById(R.id.invalidEmailTextView); // New error message TextView
+        invalidEmailTextView = findViewById(R.id.invalidEmailTextView);
 
+        // Set up "Sign Up" clickable text
         TextView signUpTextView = findViewById(R.id.signUpTextView);
-
-        // Make "Sign Up" clickable
         SpannableString spannableString = new SpannableString("Don't have an account? Sign Up");
 
         ClickableSpan clickableSpan = new ClickableSpan() {
             @Override
             public void onClick(View view) {
-                // Navigate to Registration Activity
                 Intent intent = new Intent(LoginActivity.this, RegistrationActivity.class);
                 startActivity(intent);
             }
@@ -66,12 +74,11 @@ public class LoginActivity extends AppCompatActivity {
         };
 
         spannableString.setSpan(clickableSpan, 23, 30, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-
         signUpTextView.setText(spannableString);
         signUpTextView.setMovementMethod(LinkMovementMethod.getInstance());
         signUpTextView.setHighlightColor(Color.TRANSPARENT);
 
-        // Set the login button click listener
+        // Handle login button click
         loginButton.setOnClickListener(v -> validateLogin());
     }
 
@@ -79,34 +86,60 @@ public class LoginActivity extends AppCompatActivity {
         String email = emailEditText.getText().toString().trim();
         String password = passwordEditText.getText().toString().trim();
 
-        // Check if email is empty
+        // Check if fields are empty
         if (email.isEmpty() || password.isEmpty()) {
             Toast.makeText(this, "Please fill out both fields.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Check if email is valid (contains '@')
+        // Validate email format
         if (!email.contains("@")) {
-            invalidEmailTextView.setVisibility(View.VISIBLE); // Show error message
+            invalidEmailTextView.setVisibility(View.VISIBLE);
             return;
         } else {
-            invalidEmailTextView.setVisibility(View.GONE); // Hide error message if email is valid
+            invalidEmailTextView.setVisibility(View.GONE);
         }
 
-        // Simulating email and password check (replace this with your actual validation logic)
-        if (!email.equals("user@example.com")) {
-            // Email does not match any account
-            Toast.makeText(this, "No account found with this email.", Toast.LENGTH_SHORT).show();
-        } else {
-            // Check if the password is correct
-            if (!password.equals("password123")) {  // Replace with actual password validation logic
-                incorrectPasswordTextView.setVisibility(View.VISIBLE); // Show the incorrect password message
+        // Attempt to sign in with Firebase Authentication
+        mAuth.signInWithEmailAndPassword(email, password).addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                Toast.makeText(LoginActivity.this, "Login successful", Toast.LENGTH_SHORT).show();
+
+                // After successful login, fetch user data from Firestore
+                String userId = mAuth.getCurrentUser().getUid();
+                fetchUserData(userId);
             } else {
-                // Password is correct, proceed to the next activity
-                Intent intent = new Intent(LoginActivity.this, HomeActivity.class); // MainActivity is your next screen
-                startActivity(intent);
-                finish();
+                incorrectPasswordTextView.setVisibility(View.VISIBLE);
+                Toast.makeText(LoginActivity.this, "Authentication failed: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
             }
-        }
+        });
+    }
+
+    private void fetchUserData(String userId) {
+        // Fetch user data from Firestore using userId
+        db.collection("users").document(userId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        // Extract user data from Firestore
+                        String username = documentSnapshot.getString("username");
+                        String firstName = documentSnapshot.getString("firstName");
+                        String lastName = documentSnapshot.getString("lastName");
+                        String email = documentSnapshot.getString("email");
+
+                        // Pass the user data to the HomeActivity
+                        Intent intent = new Intent(LoginActivity.this, HomeActivity.class);
+                        intent.putExtra("username", username);
+                        intent.putExtra("firstName", firstName);
+                        intent.putExtra("lastName", lastName);
+                        intent.putExtra("email", email);
+                        startActivity(intent);
+                        finish();
+                    } else {
+                        Toast.makeText(LoginActivity.this, "User data not found in Firestore.", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(LoginActivity.this, "Error fetching user data: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
     }
 }

@@ -76,7 +76,7 @@ public class EmergencyContactActivity extends AppCompatActivity {
         firstName.setLayoutParams(lp1);
 
         EditText lastName = new EditText(this);
-        lastName.setHint("Second Name");
+        lastName.setHint("Last Name");
         lastName.setInputType(InputType.TYPE_TEXT_VARIATION_PERSON_NAME);
         lastName.setBackground(getDrawable(android.R.drawable.edit_text));
         lastName.setPadding(12, 12, 12, 12);
