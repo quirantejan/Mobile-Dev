@@ -26,15 +26,12 @@ public class EmergencyContactActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_emergency_contact);
 
-        // Initialize UI components
         emergencyContactsContainer = findViewById(R.id.emergencyContactsContainer);
         addContactButton = findViewById(R.id.addContactButton);
         doneButton = findViewById(R.id.doneButton);
 
-        // Initial emergency contact field
         addInitialContactField();
 
-        // Add another contact button click listener
         addContactButton.setOnClickListener(v -> {
             if (validateLastContact() && contactCount < MAX_CONTACTS) {
                 addNewContactField();
@@ -43,95 +40,104 @@ public class EmergencyContactActivity extends AppCompatActivity {
             }
         });
 
-        // Done button click listener
         doneButton.setOnClickListener(v -> {
-            // Navigate to the Home Activity
             Intent intent = new Intent(EmergencyContactActivity.this, HomeActivity.class);
             startActivity(intent);
-            finish();  // Optional, if you want to close this activity and not allow back navigation
+            finish();
         });
     }
 
     private void addInitialContactField() {
-        EditText nameEditText = new EditText(this);
-        nameEditText.setHint("Contact Name");
-        nameEditText.setInputType(InputType.TYPE_TEXT_VARIATION_PERSON_NAME);
-        nameEditText.setBackground(getDrawable(android.R.drawable.edit_text));
-        nameEditText.setPadding(12, 12, 12, 12);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        );
-        lp.setMargins(0, 0, 0, 8);
-        nameEditText.setLayoutParams(lp);
-
-        EditText emailEditText = new EditText(this);
-        emailEditText.setHint("Contact Email");
-        emailEditText.setInputType(InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-        emailEditText.setBackground(getDrawable(android.R.drawable.edit_text));
-        emailEditText.setPadding(12, 12, 12, 12);
-        LinearLayout.LayoutParams lp2 = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        );
-        lp2.setMargins(0, 0, 0, 16);
-        emailEditText.setLayoutParams(lp2);
-
-        emergencyContactsContainer.addView(nameEditText);
-        emergencyContactsContainer.addView(emailEditText);
-    }
-
-    private boolean validateLastContact() {
-        View nameView = emergencyContactsContainer.getChildAt(emergencyContactsContainer.getChildCount() - 2);
-        View emailView = emergencyContactsContainer.getChildAt(emergencyContactsContainer.getChildCount() - 1);
-
-        EditText nameField = (EditText) nameView;
-        EditText emailField = (EditText) emailView;
-
-        String name = nameField.getText().toString().trim();
-        String email = emailField.getText().toString().trim();
-
-        if (!name.matches("^[A-Za-z]{2,}\\s[A-Za-z]{2,}$")) {
-            nameField.setError("Enter first and last name with at least 2 letters each");
-            return false;
-        }
-
-        if (!email.contains("@")) {
-            emailField.setError("Enter a valid email");
-            return false;
-        }
-
-        return true;
+        addContactField();
     }
 
     private void addNewContactField() {
         contactCount++;
+        addContactField();
+    }
 
-        EditText nameEditText = new EditText(this);
-        nameEditText.setHint("Contact Name");
-        nameEditText.setInputType(InputType.TYPE_TEXT_VARIATION_PERSON_NAME);
-        nameEditText.setBackground(getDrawable(android.R.drawable.edit_text));
-        nameEditText.setPadding(12, 12, 12, 12);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+    private void addContactField() {
+        LinearLayout nameRow = new LinearLayout(this);
+        nameRow.setOrientation(LinearLayout.HORIZONTAL);
+        nameRow.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
-        );
-        lp.setMargins(0, 0, 0, 8);
-        nameEditText.setLayoutParams(lp);
+        ));
+        nameRow.setPadding(0, 0, 0, 8);
+        nameRow.setWeightSum(2);
+
+        EditText firstName = new EditText(this);
+        firstName.setHint("First Name");
+        firstName.setInputType(InputType.TYPE_TEXT_VARIATION_PERSON_NAME);
+        firstName.setBackground(getDrawable(android.R.drawable.edit_text));
+        firstName.setPadding(12, 12, 12, 12);
+        LinearLayout.LayoutParams lp1 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1);
+        lp1.setMargins(0, 0, 8, 0);
+        firstName.setLayoutParams(lp1);
+
+        EditText lastName = new EditText(this);
+        lastName.setHint("Second Name");
+        lastName.setInputType(InputType.TYPE_TEXT_VARIATION_PERSON_NAME);
+        lastName.setBackground(getDrawable(android.R.drawable.edit_text));
+        lastName.setPadding(12, 12, 12, 12);
+        LinearLayout.LayoutParams lp2 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1);
+        lp2.setMargins(8, 0, 0, 0);
+        lastName.setLayoutParams(lp2);
+
+        nameRow.addView(firstName);
+        nameRow.addView(lastName);
 
         EditText emailEditText = new EditText(this);
         emailEditText.setHint("Contact Email");
         emailEditText.setInputType(InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
         emailEditText.setBackground(getDrawable(android.R.drawable.edit_text));
         emailEditText.setPadding(12, 12, 12, 12);
-        LinearLayout.LayoutParams lp2 = new LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams lpEmail = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
         );
-        lp2.setMargins(0, 0, 0, 16);
-        emailEditText.setLayoutParams(lp2);
+        lpEmail.setMargins(0, 8, 0, 16);
+        emailEditText.setLayoutParams(lpEmail);
 
-        emergencyContactsContainer.addView(nameEditText);
+        emergencyContactsContainer.addView(nameRow);
         emergencyContactsContainer.addView(emailEditText);
+    }
+
+    private boolean validateLastContact() {
+        int childCount = emergencyContactsContainer.getChildCount();
+        if (childCount < 2) return false;
+
+        View nameRowView = emergencyContactsContainer.getChildAt(childCount - 2);
+        View emailView = emergencyContactsContainer.getChildAt(childCount - 1);
+
+        if (!(nameRowView instanceof LinearLayout)) return false;
+
+        LinearLayout nameRow = (LinearLayout) nameRowView;
+        if (nameRow.getChildCount() < 2) return false;
+
+        EditText firstName = (EditText) nameRow.getChildAt(0);
+        EditText secondName = (EditText) nameRow.getChildAt(1);
+        EditText email = (EditText) emailView;
+
+        String first = firstName.getText().toString().trim();
+        String second = secondName.getText().toString().trim();
+        String emailStr = email.getText().toString().trim();
+
+        if (!first.matches("^[A-Za-z]{2,}$")) {
+            firstName.setError("At least 2 letters");
+            return false;
+        }
+
+        if (!second.matches("^[A-Za-z]{2,}$")) {
+            secondName.setError("At least 2 letters");
+            return false;
+        }
+
+        if (!emailStr.contains("@")) {
+            email.setError("Enter a valid email");
+            return false;
+        }
+
+        return true;
     }
 }

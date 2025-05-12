@@ -22,7 +22,7 @@ import androidx.core.view.WindowInsetsCompat;
 
 public class RegistrationActivity extends AppCompatActivity {
 
-    private EditText usernameEditText, fullNameEditText, emailEditText, passwordEditText, confirmPasswordEditText;
+    private EditText usernameEditText, firstNameEditText, lastNameEditText, emailEditText, passwordEditText, confirmPasswordEditText;
     private Button registerButton;
 
     @Override
@@ -38,7 +38,8 @@ public class RegistrationActivity extends AppCompatActivity {
         });
 
         usernameEditText = findViewById(R.id.usernameEditText);
-        fullNameEditText = findViewById(R.id.fullNameEditText);
+        firstNameEditText = findViewById(R.id.firstNameEditText);
+        lastNameEditText = findViewById(R.id.lastNameEditText);
         emailEditText = findViewById(R.id.emailEditText);
         passwordEditText = findViewById(R.id.passwordEditText);
         confirmPasswordEditText = findViewById(R.id.confirmPasswordEditText);
@@ -82,7 +83,8 @@ public class RegistrationActivity extends AppCompatActivity {
 
     private boolean validateInputs() {
         String username = usernameEditText.getText().toString().trim();
-        String fullName = fullNameEditText.getText().toString().trim();
+        String firstName = firstNameEditText.getText().toString().trim();
+        String lastName = lastNameEditText.getText().toString().trim();
         String email = emailEditText.getText().toString().trim();
         String password = passwordEditText.getText().toString();
         String confirmPassword = confirmPasswordEditText.getText().toString();
@@ -92,8 +94,13 @@ public class RegistrationActivity extends AppCompatActivity {
             return false;
         }
 
-        if (!fullName.matches("^[A-Za-z]{2,}\\s[A-Za-z]{2,}$")) {
-            fullNameEditText.setError("Enter full name with first and last name (min 2 letters each)");
+        if (firstName.length() < 2) {
+            firstNameEditText.setError("First name must be at least 2 letters");
+            return false;
+        }
+
+        if (lastName.length() < 2) {
+            lastNameEditText.setError("Last name must be at least 2 letters");
             return false;
         }
 

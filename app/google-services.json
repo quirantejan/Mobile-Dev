@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "675957781716",
+    "project_id": "smartech-4b74a",
+    "storage_bucket": "smartech-4b74a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:675957781716:android:a6bebc4ee746247a523741",
+        "android_client_info": {
+          "package_name": "com.example.smartech"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyARylmH6Bs-ENpnK68RFEabihCVf7yZqPE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
