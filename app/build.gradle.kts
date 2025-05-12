@@ -31,18 +31,12 @@ android {
     }
 }
 
-
 dependencies {
-    implementation("com.airbnb.android:lottie:5.0.3")
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.activity)
     implementation(libs.constraintlayout)
-
-    implementation("androidx.camera:camera-core:1.1.0")
-    implementation("androidx.camera:camera-camera2:1.1.0")
-    implementation("androidx.camera:camera-lifecycle:1.1.0")
-    implementation("androidx.camera:camera-view:1.0.0-alpha22")
+    implementation(libs.cardview)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
