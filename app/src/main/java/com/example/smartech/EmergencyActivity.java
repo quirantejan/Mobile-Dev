@@ -36,21 +36,18 @@ public class EmergencyActivity extends AppCompatActivity {
         recognizedText = findViewById(R.id.recognizedText);
         mainLayout = findViewById(R.id.main);
 
-        // Request audio permission if not already granted
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO},
                     REQUEST_RECORD_AUDIO_PERMISSION);
         }
 
-        // Initialize Text-to-Speech
         textToSpeech = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 int langResult = textToSpeech.setLanguage(Locale.US);
                 if (langResult == TextToSpeech.LANG_MISSING_DATA || langResult == TextToSpeech.LANG_NOT_SUPPORTED) {
                     Toast.makeText(EmergencyActivity.this, "Language not supported", Toast.LENGTH_SHORT).show();
                 } else {
-                    // Speak out when the activity is opened
                     speakOut("Emergency feature opened.");
                 }
             } else {
@@ -58,7 +55,6 @@ public class EmergencyActivity extends AppCompatActivity {
             }
         });
 
-        // Initialize voice assistant helper
         voiceAssistantHelper = new VoiceAssistantHelper(this, new VoiceAssistantHelper.Listener() {
             @Override
             public void onCommandReceived(String command) {
@@ -77,7 +73,6 @@ public class EmergencyActivity extends AppCompatActivity {
             }
         });
 
-        // Set up touch listener to start and stop listening
         mainLayout.setOnTouchListener((v, event) -> {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
@@ -92,14 +87,12 @@ public class EmergencyActivity extends AppCompatActivity {
         });
     }
 
-    // Method to speak out text
     private void speakOut(String text) {
         if (textToSpeech != null) {
             textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
         }
     }
 
-    // Vibrate method for feedback
     private void vibrate() {
         Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
         if (vibrator != null && vibrator.hasVibrator()) {
@@ -113,7 +106,7 @@ public class EmergencyActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        // Clean up text-to-speech resources
+
         if (textToSpeech != null) {
             textToSpeech.stop();
             textToSpeech.shutdown();
