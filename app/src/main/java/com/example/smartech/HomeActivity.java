@@ -45,7 +45,7 @@ public class HomeActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
 
         // REMOVE intent-based customName fetching
-        firstName = getIntent().getStringExtra("firstName");  // You can remove this too if you fetch it from DB
+        firstName = getIntent().getStringExtra("firstName"); 
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -128,7 +128,11 @@ public class HomeActivity extends AppCompatActivity {
         } else if (command.contains("emergency")) {
             startActivity(new Intent(this, EmergencyActivity.class));
             speakOut("Opening emergency features.");
-        } else if (command.contains("who are my contacts")) {
+        }
+        else if (command.contains("help")) {
+            startActivity(new Intent(this, HelpActivity.class));
+            speakOut("Opening help features.");
+        }  else if (command.contains("who are my contacts")) {
             getEmergencyContacts();
         } else if (command.contains("what's my name") || command.contains("what is my name")) {
             speakOut("Your name is " + (customName != null ? customName : firstName));
