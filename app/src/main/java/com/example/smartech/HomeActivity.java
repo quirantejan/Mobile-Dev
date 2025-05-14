@@ -61,13 +61,12 @@ public class HomeActivity extends AppCompatActivity {
                 if (langResult == TextToSpeech.LANG_MISSING_DATA || langResult == TextToSpeech.LANG_NOT_SUPPORTED) {
                     Toast.makeText(HomeActivity.this, "Language not supported", Toast.LENGTH_SHORT).show();
                 }
-                fetchCustomNameFromFirebase();  // Always fetch name from Firestore
+                fetchCustomNameFromFirebase();
             } else {
                 Toast.makeText(HomeActivity.this, "TextToSpeech initialization failed", Toast.LENGTH_SHORT).show();
             }
         });
 
-        // Initialize VoiceAssistantHelper
         voiceAssistantHelper = new VoiceAssistantHelper(this, new VoiceAssistantHelper.Listener() {
             @Override
             public void onCommandReceived(String command) {
@@ -120,25 +119,71 @@ public class HomeActivity extends AppCompatActivity {
     private void routeCommand(String command) {
         command = command.toLowerCase();
 
-        if (command.contains("daily planner")) {
+        if ((command.contains("who are") || command.contains("show") ||command.contains("who is") || command.contains("tell")) &&
+                (command.contains("contact") || command.contains("contacts") || command.contains("emergency contact") || command.contains("emergency contacts") || command.contains("my contacts"))) {
+            getEmergencyContacts();
+            return;
+        }
+
+
+        // Daily planner intent
+        if (matches(command, "daily", "planner")) {
             startActivity(new Intent(this, DailyPlannerActivity.class));
             speakOut("Opening your daily planner.");
-        } else if (command.contains("object recognition")) {
+            return;
+        }
+
+        // Object recognition intent
+        if (matchesAny(command, new String[]{"recognize", "detect", "identify"}, new String[]{"object", "thing", "item"})) {
             startActivity(new Intent(this, ObjectRecognitionActivity.class));
             speakOut("Opening object recognition.");
-        } else if (command.contains("emergency")) {
-            startActivity(new Intent(this, EmergencyActivity.class));
-            speakOut("Opening emergency features.");
+            return;
         }
-        else if (command.contains("help")) {
+
+        // Help intent
+        if (command.contains("help") || command.contains("assist")) {
             startActivity(new Intent(this, HelpActivity.class));
             speakOut("Opening help features.");
-        }  else if (command.contains("who are my contacts")) {
-            getEmergencyContacts();
-        } else if (command.contains("what's my name") || command.contains("what is my name")) {
-            speakOut("Your name is " + (customName != null ? customName : firstName));
+            return;
         }
+
+
+        if (command.contains("emergency")) {
+            startActivity(new Intent(this, EmergencyActivity.class));
+            speakOut("Opening emergency features.");
+            return;
+        }
+
+        // Name intent
+        if (matchesAny(command, new String[]{"what", "say", "tell"}, new String[]{"my name"})) {
+            speakOut("Your name is " + (customName != null ? customName : firstName));
+            return;
+        }
+
+        speakOut("Sorry, I didn't understand that. Could you please repeat?");
     }
+
+    private boolean matches(String command, String... keywords) {
+        for (String keyword : keywords) {
+            if (!command.contains(keyword)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean matchesAny(String command, String[] phrases, String[] topics) {
+        for (String phrase : phrases) {
+            for (String topic : topics) {
+                if (command.contains(phrase) && command.contains(topic)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+
 
     private void getEmergencyContacts() {
         String userId = mAuth.getCurrentUser().getUid();

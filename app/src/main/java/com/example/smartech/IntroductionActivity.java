@@ -51,9 +51,6 @@ public class IntroductionActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
-        TextView welcomeText = findViewById(R.id.welcomeTextView);
-        welcomeText.setText("Welcome, " + firstName + " " + lastName + "!");
-
         tts = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 tts.setLanguage(Locale.US);
@@ -130,7 +127,7 @@ public class IntroductionActivity extends AppCompatActivity {
         if (awaitingNameCorrection && customName != null) {
             speak("Perfect! Thanks, " + customName + ". I’ll remember that.");
             nameConfirmed = true;
-            updateFirebaseName(customName); // Store the corrected name in Firebase
+            updateFirebaseName(customName);
             redirectAfterDelay();
         } else if (!awaitingNameCorrection) {
             speak("Thank you, " + firstName + "!");
