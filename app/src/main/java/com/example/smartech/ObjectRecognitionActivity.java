@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.util.Size;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -50,18 +51,21 @@ public class ObjectRecognitionActivity extends AppCompatActivity {
         previewView = findViewById(R.id.previewView);
         objectTextView = findViewById(R.id.objectTextView);
 
+        // Handling window insets (system bars)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
 
+        // Check for camera permissions
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, 100);
         } else {
             startCamera();
         }
 
+        // Object detector options setup
         ObjectDetectorOptions options = new ObjectDetectorOptions.Builder()
                 .setDetectorMode(ObjectDetectorOptions.STREAM_MODE)
                 .enableMultipleObjects()
@@ -94,6 +98,7 @@ public class ObjectRecognitionActivity extends AppCompatActivity {
 
                 imageAnalysis.setAnalyzer(cameraExecutor, this::analyzeImage);
 
+                // Unbind previous use cases and bind new use cases to camera
                 cameraProvider.unbindAll();
                 cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis);
 
@@ -114,20 +119,18 @@ public class ObjectRecognitionActivity extends AppCompatActivity {
                         if (!detectedObjects.isEmpty()) {
                             StringBuilder detectedText = new StringBuilder();
 
+                            // Iterate over all detected objects
                             for (DetectedObject obj : detectedObjects) {
                                 List<DetectedObject.Label> labels = obj.getLabels();
 
                                 if (!labels.isEmpty()) {
+                                    // Get the label and build the message
                                     for (DetectedObject.Label label : labels) {
                                         String labelText = label.getText();
-                                        float confidence = label.getConfidence(); // 0.0 to 1.0
-                                        detectedText.append(labelText)
-                                                .append(" (")
-                                                .append(String.format("%.0f", confidence * 100))
-                                                .append("%)").append("\n");
+                                        detectedText.append("You just scanned a ").append(labelText).append(".\n");
                                     }
                                 } else {
-                                    detectedText.append("Object detected (no label)").append("\n");
+                                    detectedText.append("No label found for this object.\n");
                                 }
                             }
 
@@ -146,7 +149,6 @@ public class ObjectRecognitionActivity extends AppCompatActivity {
             imageProxy.close();
         }
     }
-
 
     private void updateText(String text) {
         runOnUiThread(() -> objectTextView.setText(text));
