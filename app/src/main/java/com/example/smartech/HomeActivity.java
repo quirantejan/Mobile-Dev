@@ -10,6 +10,7 @@ import android.os.Vibrator;
 import android.speech.tts.TextToSpeech;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
@@ -30,6 +31,7 @@ public class HomeActivity extends AppCompatActivity {
     private ConstraintLayout mainLayout;
     private TextToSpeech textToSpeech;
     private FirebaseAuth mAuth;
+    private TextView recognizedText;
     private FirebaseFirestore db;
     private String customName = null;
     private String firstName = "";
@@ -40,12 +42,12 @@ public class HomeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_home);
 
         micAnimation = findViewById(R.id.micAnimation);
+        recognizedText = findViewById(R.id.recognizedText);
         mainLayout = findViewById(R.id.main);
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
-        // REMOVE intent-based customName fetching
-        firstName = getIntent().getStringExtra("firstName"); 
+        firstName = getIntent().getStringExtra("firstName");
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -53,7 +55,6 @@ public class HomeActivity extends AppCompatActivity {
                     REQUEST_RECORD_AUDIO_PERMISSION);
         }
 
-        // Initialize TextToSpeech engine
         textToSpeech = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 int langResult = textToSpeech.setLanguage(Locale.US);
@@ -70,6 +71,7 @@ public class HomeActivity extends AppCompatActivity {
         voiceAssistantHelper = new VoiceAssistantHelper(this, new VoiceAssistantHelper.Listener() {
             @Override
             public void onCommandReceived(String command) {
+                recognizedText.setText(command);
                 routeCommand(command);
             }
 
@@ -85,7 +87,6 @@ public class HomeActivity extends AppCompatActivity {
             }
         });
 
-        // Set up mic animation trigger
         mainLayout.setOnTouchListener((v, event) -> {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
