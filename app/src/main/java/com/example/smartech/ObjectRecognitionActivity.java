@@ -2,6 +2,8 @@ package com.example.smartech;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.graphics.Rect;
+import android.media.Image;
 import android.os.Bundle;
 import android.util.Size;
 import android.widget.TextView;
@@ -10,6 +12,8 @@ import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraSelector;
+import androidx.camera.core.ImageAnalysis;
+import androidx.camera.core.ImageProxy;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
@@ -17,13 +21,25 @@ import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.objects.DetectedObject;
+import com.google.mlkit.vision.objects.ObjectDetection;
+import com.google.mlkit.vision.objects.ObjectDetector;
+import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions;
+
+import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ObjectRecognitionActivity extends AppCompatActivity {
 
     private PreviewView previewView;
     private TextView objectTextView;
+    private ExecutorService cameraExecutor;
+    private ObjectDetector objectDetector;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +61,15 @@ public class ObjectRecognitionActivity extends AppCompatActivity {
         } else {
             startCamera();
         }
+
+        ObjectDetectorOptions options = new ObjectDetectorOptions.Builder()
+                .setDetectorMode(ObjectDetectorOptions.STREAM_MODE)
+                .enableMultipleObjects()
+                .enableClassification()
+                .build();
+
+        objectDetector = ObjectDetection.getClient(options);
+        cameraExecutor = Executors.newSingleThreadExecutor();
     }
 
     private void startCamera() {
@@ -57,19 +82,74 @@ public class ObjectRecognitionActivity extends AppCompatActivity {
                         .requireLensFacing(CameraSelector.LENS_FACING_BACK)
                         .build();
 
-                androidx.camera.core.Preview previewUseCase = new androidx.camera.core.Preview.Builder()
+                androidx.camera.core.Preview preview = new androidx.camera.core.Preview.Builder()
                         .setTargetResolution(new Size(1280, 720))
                         .build();
+                preview.setSurfaceProvider(previewView.getSurfaceProvider());
 
-                previewUseCase.setSurfaceProvider(previewView.getSurfaceProvider());
+                ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
+                        .setTargetResolution(new Size(1280, 720))
+                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                        .build();
+
+                imageAnalysis.setAnalyzer(cameraExecutor, this::analyzeImage);
 
                 cameraProvider.unbindAll();
-                cameraProvider.bindToLifecycle(this, cameraSelector, previewUseCase);
+                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis);
 
             } catch (ExecutionException | InterruptedException e) {
                 e.printStackTrace();
             }
         }, ContextCompat.getMainExecutor(this));
+    }
+
+    private void analyzeImage(ImageProxy imageProxy) {
+        @SuppressWarnings("UnsafeOptInUsageError")
+        Image mediaImage = imageProxy.getImage();
+        if (mediaImage != null) {
+            InputImage image = InputImage.fromMediaImage(mediaImage, imageProxy.getImageInfo().getRotationDegrees());
+
+            objectDetector.process(image)
+                    .addOnSuccessListener(detectedObjects -> {
+                        if (!detectedObjects.isEmpty()) {
+                            StringBuilder detectedText = new StringBuilder();
+
+                            for (DetectedObject obj : detectedObjects) {
+                                List<DetectedObject.Label> labels = obj.getLabels();
+
+                                if (!labels.isEmpty()) {
+                                    for (DetectedObject.Label label : labels) {
+                                        String labelText = label.getText();
+                                        float confidence = label.getConfidence(); // 0.0 to 1.0
+                                        detectedText.append(labelText)
+                                                .append(" (")
+                                                .append(String.format("%.0f", confidence * 100))
+                                                .append("%)").append("\n");
+                                    }
+                                } else {
+                                    detectedText.append("Object detected (no label)").append("\n");
+                                }
+                            }
+
+                            updateText(detectedText.toString().trim());
+                        } else {
+                            updateText("No object detected");
+                        }
+                        imageProxy.close();
+                    })
+                    .addOnFailureListener(e -> {
+                        e.printStackTrace();
+                        updateText("Detection error");
+                        imageProxy.close();
+                    });
+        } else {
+            imageProxy.close();
+        }
+    }
+
+
+    private void updateText(String text) {
+        runOnUiThread(() -> objectTextView.setText(text));
     }
 
     @Override
@@ -78,6 +158,14 @@ public class ObjectRecognitionActivity extends AppCompatActivity {
             startCamera();
         } else {
             Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (cameraExecutor != null) {
+            cameraExecutor.shutdown();
         }
     }
 }
