@@ -22,7 +22,6 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.DocumentSnapshot;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -55,7 +54,6 @@ public class LoginActivity extends AppCompatActivity {
 
         TextView signUpTextView = findViewById(R.id.signUpTextView);
         SpannableString spannableString = new SpannableString("Don't have an account? Sign Up");
-
         ClickableSpan clickableSpan = new ClickableSpan() {
             @Override
             public void onClick(View view) {
@@ -70,7 +68,6 @@ public class LoginActivity extends AppCompatActivity {
                 ds.setColor(Color.BLUE);
             }
         };
-
         spannableString.setSpan(clickableSpan, 23, 30, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         signUpTextView.setText(spannableString);
         signUpTextView.setMovementMethod(LinkMovementMethod.getInstance());
@@ -98,7 +95,6 @@ public class LoginActivity extends AppCompatActivity {
         mAuth.signInWithEmailAndPassword(email, password).addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
                 Toast.makeText(LoginActivity.this, "Login successful", Toast.LENGTH_SHORT).show();
-
                 String userId = mAuth.getCurrentUser().getUid();
                 fetchUserData(userId);
             } else {
@@ -116,9 +112,16 @@ public class LoginActivity extends AppCompatActivity {
                         String firstName = documentSnapshot.getString("firstName");
                         String lastName = documentSnapshot.getString("lastName");
                         String email = documentSnapshot.getString("email");
+                        Boolean firstTimeLogin = documentSnapshot.getBoolean("firstTimeLogin");
 
+                        Intent intent;
+                        if (firstTimeLogin != null && firstTimeLogin) {
+                            db.collection("users").document(userId).update("firstTimeLogin", false);
+                            intent = new Intent(LoginActivity.this, IntroductionActivity.class);
+                        } else {
+                            intent = new Intent(LoginActivity.this, HomeActivity.class);
+                        }
 
-                        Intent intent = new Intent(LoginActivity.this, HomeActivity.class);
                         intent.putExtra("username", username);
                         intent.putExtra("firstName", firstName);
                         intent.putExtra("lastName", lastName);
