@@ -26,6 +26,8 @@ public class TextSpeakerHelper {
 
     public void speak(String message) {
         if (isReady && message != null && !message.isEmpty()) {
+            // Stop the previous speech if any
+            tts.stop();
             tts.speak(message, TextToSpeech.QUEUE_FLUSH, null, null);
         }
     }

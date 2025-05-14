@@ -15,6 +15,7 @@ public class VoiceAssistantHelper {
     private final SpeechRecognizer speechRecognizer;
     private final Intent recognizerIntent;
     private final Listener listener;
+    private TextSpeakerHelper textSpeakerHelper;  // Reference to TextSpeakerHelper
 
     public VoiceAssistantHelper(Activity activity, Listener listener) {
         this.activity = activity;
@@ -25,6 +26,9 @@ public class VoiceAssistantHelper {
         recognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         recognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
         recognizerIntent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak now...");
+
+        // Initialize TextSpeakerHelper for TTS
+        textSpeakerHelper = new TextSpeakerHelper(activity);
 
         speechRecognizer.setRecognitionListener(new RecognitionListener() {
             @Override public void onReadyForSpeech(Bundle params) {
@@ -72,9 +76,24 @@ public class VoiceAssistantHelper {
         speechRecognizer.stopListening();
     }
 
+    // Method to speak out a message using TextSpeakerHelper
+    public void speak(String message) {
+        if (textSpeakerHelper != null) {
+            textSpeakerHelper.speak(message);
+        }
+    }
+
+    // Interface for callback methods
     public interface Listener {
         void onCommandReceived(String command);
         void onListeningStarted();
         void onListeningStopped();
+    }
+
+    // Don't forget to release resources when the helper is destroyed
+    public void shutdown() {
+        if (textSpeakerHelper != null) {
+            textSpeakerHelper.shutdown();  // Release TTS resources
+        }
     }
 }
