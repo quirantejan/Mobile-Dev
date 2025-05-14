@@ -129,21 +129,21 @@ public class HomeActivity extends AppCompatActivity {
         if (matches(command, "daily", "planner") ||
                 command.contains("add task") ||
                 command.contains("add to planner") ||
-                (command.contains("add") && command.contains("task")) ||
-                (command.contains("schedule") && (command.contains("task") || command.contains("something")))) {
+                (command.contains("add") || command.contains("task")) ||
+                (command.contains("schedule") || (command.contains("task") || command.contains("something"))) || (command.contains("planner") || command.contains("plan"))) {
 
             startActivity(new Intent(this, DailyPlannerActivity.class));
             speakOut("Opening your daily planner.");
             return;
         }
 
-
-        // Object recognition intent
-        if (matchesAny(command, new String[]{"recognize", "detect", "identify"}, new String[]{"object", "thing", "item"})) {
+        if (command.contains("object recognition") ||
+                matchesAny(command, new String[]{"recognize", "detect", "identify"}, new String[]{"object", "thing", "item"})) {
             startActivity(new Intent(this, ObjectRecognitionActivity.class));
             speakOut("Opening object recognition.");
             return;
         }
+
 
         // Help intent
         if (command.contains("help") || command.contains("assist")) {
