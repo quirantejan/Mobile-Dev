@@ -10,7 +10,6 @@ import android.os.Vibrator;
 import android.speech.tts.TextToSpeech;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
@@ -28,7 +27,6 @@ public class HomeActivity extends AppCompatActivity {
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 1;
     private VoiceAssistantHelper voiceAssistantHelper;
     private LottieAnimationView micAnimation;
-    private TextView recognizedText;
     private ConstraintLayout mainLayout;
     private TextToSpeech textToSpeech;
     private FirebaseAuth mAuth;
@@ -40,17 +38,18 @@ public class HomeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_home);
 
         micAnimation = findViewById(R.id.micAnimation);
-        recognizedText = findViewById(R.id.recognizedText);
         mainLayout = findViewById(R.id.main);
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
+        // Check for audio recording permission
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO},
                     REQUEST_RECORD_AUDIO_PERMISSION);
         }
 
+        // Initialize TextToSpeech engine
         textToSpeech = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 int langResult = textToSpeech.setLanguage(Locale.US);
@@ -62,11 +61,11 @@ public class HomeActivity extends AppCompatActivity {
             }
         });
 
+        // Initialize VoiceAssistantHelper
         voiceAssistantHelper = new VoiceAssistantHelper(this, new VoiceAssistantHelper.Listener() {
             @Override
             public void onCommandReceived(String command) {
-                recognizedText.setText(command);
-                routeCommand(command);
+                routeCommand(command);  // Process the command
             }
 
             @Override
@@ -81,20 +80,22 @@ public class HomeActivity extends AppCompatActivity {
             }
         });
 
+        // Set up mic animation trigger
         mainLayout.setOnTouchListener((v, event) -> {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
                     vibrate();
-                    voiceAssistantHelper.startListening();
+                    voiceAssistantHelper.startListening();  // Start listening on touch down
                     break;
                 case MotionEvent.ACTION_UP:
-                    voiceAssistantHelper.stopListening();
+                    voiceAssistantHelper.stopListening();  // Stop listening on touch release
                     break;
             }
             return true;
         });
     }
 
+    // Method to make the device vibrate
     private void vibrate() {
         Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
         if (vibrator != null && vibrator.hasVibrator()) {
@@ -106,21 +107,32 @@ public class HomeActivity extends AppCompatActivity {
         }
     }
 
+    // Method to route and handle the received commands
     private void routeCommand(String command) {
         command = command.toLowerCase();
+
+        // Command to open the DailyPlannerActivity
         if (command.contains("daily planner")) {
             startActivity(new Intent(this, DailyPlannerActivity.class));
-        } else if (command.contains("object recognition")) {
-            startActivity(new Intent(this, ObjectRecognitionActivity.class));
-        } else if (command.contains("emergency")) {
-            startActivity(new Intent(this, EmergencyActivity.class));
-        } else if (command.contains("help")) {
-            startActivity(new Intent(this, HelpActivity.class));
-        }else if (command.contains("who are my contacts")) {
-                getEmergencyContacts();
-            }
+            speakOut("Opening your daily planner.");
         }
+        // Command to open ObjectRecognitionActivity
+        else if (command.contains("object recognition")) {
+            startActivity(new Intent(this, ObjectRecognitionActivity.class));
+            speakOut("Opening object recognition.");
+        }
+        // Command to open EmergencyActivity
+        else if (command.contains("emergency")) {
+            startActivity(new Intent(this, EmergencyActivity.class));
+            speakOut("Opening emergency features.");
+        }
+        // Command to get emergency contacts
+        else if (command.contains("who are my contacts")) {
+            getEmergencyContacts();
+        }
+    }
 
+    // Fetch and speak out emergency contacts
     private void getEmergencyContacts() {
         String userId = mAuth.getCurrentUser().getUid();
 
@@ -142,7 +154,7 @@ public class HomeActivity extends AppCompatActivity {
                         }
                     }
 
-                    textToSpeech.speak(response.toString(), TextToSpeech.QUEUE_FLUSH, null, null);
+                    speakOut(response.toString());
                 }
             }
         }).addOnFailureListener(e -> {
@@ -150,6 +162,14 @@ public class HomeActivity extends AppCompatActivity {
         });
     }
 
+    // Method to speak out text using TTS
+    private void speakOut(String text) {
+        if (textToSpeech != null) {
+            textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
+        }
+    }
+
+    // Handle permissions result
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -160,6 +180,7 @@ public class HomeActivity extends AppCompatActivity {
         }
     }
 
+    // Cleanup TextToSpeech on destroy
     @Override
     protected void onDestroy() {
         if (textToSpeech != null) {
