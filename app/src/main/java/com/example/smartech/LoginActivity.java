@@ -38,7 +38,6 @@ public class LoginActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_login);
 
-        // Edge to edge support for system bars
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -54,7 +53,6 @@ public class LoginActivity extends AppCompatActivity {
         incorrectPasswordTextView = findViewById(R.id.incorrectPasswordTextView);
         invalidEmailTextView = findViewById(R.id.invalidEmailTextView);
 
-        // Set up "Sign Up" clickable text
         TextView signUpTextView = findViewById(R.id.signUpTextView);
         SpannableString spannableString = new SpannableString("Don't have an account? Sign Up");
 
@@ -78,7 +76,6 @@ public class LoginActivity extends AppCompatActivity {
         signUpTextView.setMovementMethod(LinkMovementMethod.getInstance());
         signUpTextView.setHighlightColor(Color.TRANSPARENT);
 
-        // Handle login button click
         loginButton.setOnClickListener(v -> validateLogin());
     }
 
@@ -86,13 +83,11 @@ public class LoginActivity extends AppCompatActivity {
         String email = emailEditText.getText().toString().trim();
         String password = passwordEditText.getText().toString().trim();
 
-        // Check if fields are empty
         if (email.isEmpty() || password.isEmpty()) {
             Toast.makeText(this, "Please fill out both fields.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Validate email format
         if (!email.contains("@")) {
             invalidEmailTextView.setVisibility(View.VISIBLE);
             return;
@@ -100,12 +95,10 @@ public class LoginActivity extends AppCompatActivity {
             invalidEmailTextView.setVisibility(View.GONE);
         }
 
-        // Attempt to sign in with Firebase Authentication
         mAuth.signInWithEmailAndPassword(email, password).addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
                 Toast.makeText(LoginActivity.this, "Login successful", Toast.LENGTH_SHORT).show();
 
-                // After successful login, fetch user data from Firestore
                 String userId = mAuth.getCurrentUser().getUid();
                 fetchUserData(userId);
             } else {
@@ -116,17 +109,15 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void fetchUserData(String userId) {
-        // Fetch user data from Firestore using userId
         db.collection("users").document(userId).get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
-                        // Extract user data from Firestore
                         String username = documentSnapshot.getString("username");
                         String firstName = documentSnapshot.getString("firstName");
                         String lastName = documentSnapshot.getString("lastName");
                         String email = documentSnapshot.getString("email");
 
-                        // Pass the user data to the HomeActivity
+
                         Intent intent = new Intent(LoginActivity.this, HomeActivity.class);
                         intent.putExtra("username", username);
                         intent.putExtra("firstName", firstName);

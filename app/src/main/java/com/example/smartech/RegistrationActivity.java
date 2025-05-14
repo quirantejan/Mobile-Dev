@@ -63,7 +63,6 @@ public class RegistrationActivity extends AppCompatActivity {
                 String email = emailEditText.getText().toString().trim();
                 String username = usernameEditText.getText().toString().trim();
 
-                // Check if email or username already exists
                 checkIfUserExists(email, username);
             }
         });
@@ -93,25 +92,20 @@ public class RegistrationActivity extends AppCompatActivity {
     }
 
     private void checkIfUserExists(String email, String username) {
-        // Check if email or username already exists in Firestore
         db.collection("users")
                 .whereEqualTo("email", email)
                 .get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful() && !task.getResult().isEmpty()) {
-                        // Email already exists
                         emailEditText.setError("Email is already in use.");
                     } else {
-                        // Check username
                         db.collection("users")
                                 .whereEqualTo("username", username)
                                 .get()
                                 .addOnCompleteListener(usernameTask -> {
                                     if (usernameTask.isSuccessful() && !usernameTask.getResult().isEmpty()) {
-                                        // Username already exists
                                         usernameEditText.setError("Username is already taken.");
                                     } else {
-                                        // Proceed with registration if no duplicates
                                         registerUser(email, username);
                                     }
                                 });
@@ -124,7 +118,6 @@ public class RegistrationActivity extends AppCompatActivity {
 
         mAuth.createUserWithEmailAndPassword(email, password).addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
-                // Save user info to Firestore
                 String userId = mAuth.getCurrentUser().getUid();
                 saveUserToFirestore(userId, email, username);
 
@@ -146,7 +139,6 @@ public class RegistrationActivity extends AppCompatActivity {
 
         db.collection("users").document(userId).set(user)
                 .addOnSuccessListener(aVoid -> {
-                    // Successfully added user data
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(RegistrationActivity.this, "Error saving user: " + e.getMessage(), Toast.LENGTH_SHORT).show();
