@@ -1,29 +1,47 @@
 package com.example.smartech;
 
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
-import android.util.Patterns;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.TextPaint;
+import android.text.method.LinkMovementMethod;
+import android.text.style.ClickableSpan;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 public class LoginActivity extends AppCompatActivity {
 
     private EditText emailEditText, passwordEditText;
     private Button loginButton;
+    private TextView incorrectPasswordTextView, invalidEmailTextView;
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_login);
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            return insets;
+        });
 
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
@@ -31,29 +49,58 @@ public class LoginActivity extends AppCompatActivity {
         emailEditText = findViewById(R.id.emailEditText);
         passwordEditText = findViewById(R.id.passwordEditText);
         loginButton = findViewById(R.id.loginButton);
+        incorrectPasswordTextView = findViewById(R.id.incorrectPasswordTextView);
+        invalidEmailTextView = findViewById(R.id.invalidEmailTextView);
 
-        loginButton.setOnClickListener(v -> {
-            String email = emailEditText.getText().toString().trim();
-            String password = passwordEditText.getText().toString();
-
-            if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-                emailEditText.setError("Invalid email");
-                return;
+        TextView signUpTextView = findViewById(R.id.signUpTextView);
+        SpannableString spannableString = new SpannableString("Don't have an account? Sign Up");
+        ClickableSpan clickableSpan = new ClickableSpan() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(LoginActivity.this, RegistrationActivity.class);
+                startActivity(intent);
             }
 
-            if (password.length() < 6) {
-                passwordEditText.setError("Password too short");
-                return;
+            @Override
+            public void updateDrawState(TextPaint ds) {
+                super.updateDrawState(ds);
+                ds.setUnderlineText(false);
+                ds.setColor(Color.BLUE);
             }
+        };
+        spannableString.setSpan(clickableSpan, 23, 30, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        signUpTextView.setText(spannableString);
+        signUpTextView.setMovementMethod(LinkMovementMethod.getInstance());
+        signUpTextView.setHighlightColor(Color.TRANSPARENT);
 
-            mAuth.signInWithEmailAndPassword(email, password).addOnCompleteListener(task -> {
-                if (task.isSuccessful()) {
-                    String userId = mAuth.getCurrentUser().getUid();
-                    fetchUserData(userId);
-                } else {
-                    Toast.makeText(LoginActivity.this, "Login failed: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
-                }
-            });
+        loginButton.setOnClickListener(v -> validateLogin());
+    }
+
+    private void validateLogin() {
+        String email = emailEditText.getText().toString().trim();
+        String password = passwordEditText.getText().toString().trim();
+
+        if (email.isEmpty() || password.isEmpty()) {
+            Toast.makeText(this, "Please fill out both fields.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (!email.contains("@")) {
+            invalidEmailTextView.setVisibility(View.VISIBLE);
+            return;
+        } else {
+            invalidEmailTextView.setVisibility(View.GONE);
+        }
+
+        mAuth.signInWithEmailAndPassword(email, password).addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                Toast.makeText(LoginActivity.this, "Login successful", Toast.LENGTH_SHORT).show();
+                String userId = mAuth.getCurrentUser().getUid();
+                fetchUserData(userId);
+            } else {
+                incorrectPasswordTextView.setVisibility(View.VISIBLE);
+                Toast.makeText(LoginActivity.this, "Authentication failed: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+            }
         });
     }
 
@@ -68,10 +115,8 @@ public class LoginActivity extends AppCompatActivity {
                         Boolean firstTimeLogin = documentSnapshot.getBoolean("firstTimeLogin");
 
                         Intent intent;
-
                         if (firstTimeLogin != null && firstTimeLogin) {
                             db.collection("users").document(userId).update("firstTimeLogin", false);
-
                             intent = new Intent(LoginActivity.this, IntroductionActivity.class);
                         } else {
                             intent = new Intent(LoginActivity.this, HomeActivity.class);
@@ -84,11 +129,11 @@ public class LoginActivity extends AppCompatActivity {
                         startActivity(intent);
                         finish();
                     } else {
-                        Toast.makeText(LoginActivity.this, "User data not found", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(LoginActivity.this, "User data not found in Firestore.", Toast.LENGTH_SHORT).show();
                     }
                 })
                 .addOnFailureListener(e -> {
-                    Toast.makeText(LoginActivity.this, "Failed to fetch user data: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(LoginActivity.this, "Error fetching user data: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
 }
