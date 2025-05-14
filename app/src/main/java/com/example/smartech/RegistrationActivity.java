@@ -115,11 +115,13 @@ public class RegistrationActivity extends AppCompatActivity {
 
     private void registerUser(String email, String username) {
         String password = passwordEditText.getText().toString();
+        String firstName = firstNameEditText.getText().toString().trim();
+        String lastName = lastNameEditText.getText().toString().trim();
 
         mAuth.createUserWithEmailAndPassword(email, password).addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
                 String userId = mAuth.getCurrentUser().getUid();
-                saveUserToFirestore(userId, email, username);
+                saveUserToFirestore(userId, email, username, firstName, lastName);
 
                 Toast.makeText(this, "Registered successfully!", Toast.LENGTH_SHORT).show();
                 Intent intent = new Intent(RegistrationActivity.this, EmergencyContactActivity.class);
@@ -131,19 +133,25 @@ public class RegistrationActivity extends AppCompatActivity {
         });
     }
 
-    private void saveUserToFirestore(String userId, String email, String username) {
-        String firstName = firstNameEditText.getText().toString().trim();
-        String lastName = lastNameEditText.getText().toString().trim();
 
-        User user = new User(userId, username, firstName, lastName, email);
+    private void saveUserToFirestore(String userId, String email, String username, String firstName, String lastName) {
+        Map<String, Object> user = new HashMap<>();
+        user.put("userId", userId);
+        user.put("username", username);
+        user.put("firstName", firstName);
+        user.put("lastName", lastName);
+        user.put("email", email);
+        user.put("firstTimeLogin", true); // <-- NEW FLAG
 
         db.collection("users").document(userId).set(user)
                 .addOnSuccessListener(aVoid -> {
+                    // Success handled in registerUser
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(RegistrationActivity.this, "Error saving user: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
+
 
     private boolean validateInputs() {
         String username = usernameEditText.getText().toString().trim();

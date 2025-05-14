@@ -31,6 +31,8 @@ public class HomeActivity extends AppCompatActivity {
     private TextToSpeech textToSpeech;
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
+    private String customName = null;  // Added to store the corrected name
+    private String firstName = "";  // Variable to store first name, adjust if needed
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,6 +43,17 @@ public class HomeActivity extends AppCompatActivity {
         mainLayout = findViewById(R.id.main);
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
+
+        // Retrieve custom name from IntroductionActivity
+        customName = getIntent().getStringExtra("customName");
+
+        // Retrieve first name (you may have this from a prior activity or Firebase)
+        firstName = getIntent().getStringExtra("firstName");  // Adjust this to how you store the first name
+
+        // If custom name isn't passed, fetch it from Firebase
+        if (customName == null) {
+            fetchCustomNameFromFirebase();
+        }
 
         // Check for audio recording permission
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
@@ -56,6 +69,8 @@ public class HomeActivity extends AppCompatActivity {
                 if (langResult == TextToSpeech.LANG_MISSING_DATA || langResult == TextToSpeech.LANG_NOT_SUPPORTED) {
                     Toast.makeText(HomeActivity.this, "Language not supported", Toast.LENGTH_SHORT).show();
                 }
+                // Automatically greet the user with their name
+                greetUser();
             } else {
                 Toast.makeText(HomeActivity.this, "TextToSpeech initialization failed", Toast.LENGTH_SHORT).show();
             }
@@ -107,6 +122,12 @@ public class HomeActivity extends AppCompatActivity {
         }
     }
 
+    // Method to greet the user automatically with their corrected name or firstName if no corrected name
+    private void greetUser() {
+        String greetingMessage = "Hello, " + (customName != null ? customName : firstName) + "! What can I do for you?";
+        speakOut(greetingMessage);
+    }
+
     // Method to route and handle the received commands
     private void routeCommand(String command) {
         command = command.toLowerCase();
@@ -130,6 +151,10 @@ public class HomeActivity extends AppCompatActivity {
         else if (command.contains("who are my contacts")) {
             getEmergencyContacts();
         }
+        // Command to say the user's name
+        else if (command.contains("what's my name") || command.contains("what is my name")) {
+            speakOut("Your name is " + (customName != null ? customName : firstName));
+        }
     }
 
     // Fetch and speak out emergency contacts
@@ -146,47 +171,43 @@ public class HomeActivity extends AppCompatActivity {
 
                     for (int i = 0; i < emergencyContacts.size(); i++) {
                         Map<String, String> contact = emergencyContacts.get(i);
-                        String firstName = contact.get("firstName");
-                        String lastName = contact.get("lastName");
-                        response.append(i + 1).append(" is ").append(firstName).append(" ").append(lastName);
-                        if (i < emergencyContacts.size() - 1) {
-                            response.append(", ");
-                        }
+                        response.append(contact.get("firstName")).append(" ").append(contact.get("lastName"));
+                        if (i < emergencyContacts.size() - 1) response.append(", ");
                     }
-
                     speakOut(response.toString());
+                } else {
+                    speakOut("No emergency contacts found.");
                 }
             }
-        }).addOnFailureListener(e -> {
-            Toast.makeText(HomeActivity.this, "Error fetching emergency contacts", Toast.LENGTH_SHORT).show();
         });
     }
 
-    // Method to speak out text using TTS
-    private void speakOut(String text) {
-        if (textToSpeech != null) {
-            textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
-        }
+    // Method to fetch custom name from Firebase if not passed from IntroductionActivity
+    private void fetchCustomNameFromFirebase() {
+        String userId = mAuth.getCurrentUser().getUid();
+        db.collection("users").document(userId).get().addOnSuccessListener(documentSnapshot -> {
+            if (documentSnapshot.exists()) {
+                if (documentSnapshot.contains("customName")) {
+                    customName = documentSnapshot.getString("customName");
+                }
+                greetUser();
+            }
+        });
     }
 
-    // Handle permissions result
+    private void speakOut(String text) {
+        if (customName != null) {
+            text = text.replace("user", customName);
+        }
+        textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_RECORD_AUDIO_PERMISSION) {
-            if (grantResults.length == 0 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "Permission denied to record audio", Toast.LENGTH_SHORT).show();
+            if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "Permission to record audio is required", Toast.LENGTH_SHORT).show();
             }
         }
-    }
-
-    // Cleanup TextToSpeech on destroy
-    @Override
-    protected void onDestroy() {
-        if (textToSpeech != null) {
-            textToSpeech.stop();
-            textToSpeech.shutdown();
-        }
-        super.onDestroy();
     }
 }
