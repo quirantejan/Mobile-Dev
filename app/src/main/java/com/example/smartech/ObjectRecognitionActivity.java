@@ -1,11 +1,13 @@
 package com.example.smartech;
 
+import com.example.smartech.TextSpeakerHelper;
+
+
 import android.Manifest;
 import android.content.pm.PackageManager;
-import android.graphics.Rect;
-import android.media.Image;
 import android.os.Bundle;
-import android.util.Size;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -19,9 +21,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.GestureDetectorCompat;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.mlkit.vision.common.InputImage;
@@ -37,10 +37,16 @@ import java.util.concurrent.Executors;
 
 public class ObjectRecognitionActivity extends AppCompatActivity {
 
+    private static final int CAMERA_PERMISSION_CODE = 100;
+
     private PreviewView previewView;
     private TextView objectTextView;
     private ExecutorService cameraExecutor;
     private ObjectDetector objectDetector;
+    private GestureDetectorCompat gestureDetector;
+    private CameraSelector currentCameraSelector;
+    private TextSpeakerHelper textSpeakerHelper;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,21 +57,32 @@ public class ObjectRecognitionActivity extends AppCompatActivity {
         previewView = findViewById(R.id.previewView);
         objectTextView = findViewById(R.id.objectTextView);
 
-        // Handling window insets (system bars)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
+        setupGestureDetector();
+        setupObjectDetector();
 
-        // Check for camera permissions
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, 100);
+        if (hasCameraPermission()) {
+            startCamera(CameraSelector.LENS_FACING_BACK);
         } else {
-            startCamera();
+            requestCameraPermission();
         }
 
-        // Object detector options setup
+        cameraExecutor = Executors.newSingleThreadExecutor();
+
+        textSpeakerHelper = new TextSpeakerHelper(this);
+
+    }
+
+    private void setupGestureDetector() {
+        gestureDetector = new GestureDetectorCompat(this, new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onDoubleTap(MotionEvent e) {
+                switchCamera();
+                return true;
+            }
+        });
+    }
+
+    private void setupObjectDetector() {
         ObjectDetectorOptions options = new ObjectDetectorOptions.Builder()
                 .setDetectorMode(ObjectDetectorOptions.STREAM_MODE)
                 .enableMultipleObjects()
@@ -73,34 +90,39 @@ public class ObjectRecognitionActivity extends AppCompatActivity {
                 .build();
 
         objectDetector = ObjectDetection.getClient(options);
-        cameraExecutor = Executors.newSingleThreadExecutor();
     }
 
-    private void startCamera() {
+    private boolean hasCameraPermission() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void requestCameraPermission() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA)) {
+            Toast.makeText(this, "Camera access is required for object detection", Toast.LENGTH_LONG).show();
+        }
+        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_CODE);
+    }
+
+    private void startCamera(int lensFacing) {
         ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
         cameraProviderFuture.addListener(() -> {
             try {
                 ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
 
-                CameraSelector cameraSelector = new CameraSelector.Builder()
-                        .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+                currentCameraSelector = new CameraSelector.Builder()
+                        .requireLensFacing(lensFacing)
                         .build();
 
-                androidx.camera.core.Preview preview = new androidx.camera.core.Preview.Builder()
-                        .setTargetResolution(new Size(1280, 720))
-                        .build();
+                androidx.camera.core.Preview preview = new androidx.camera.core.Preview.Builder().build();
                 preview.setSurfaceProvider(previewView.getSurfaceProvider());
 
                 ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
-                        .setTargetResolution(new Size(1280, 720))
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                         .build();
-
                 imageAnalysis.setAnalyzer(cameraExecutor, this::analyzeImage);
 
-                // Unbind previous use cases and bind new use cases to camera
                 cameraProvider.unbindAll();
-                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis);
+                cameraProvider.bindToLifecycle(this, currentCameraSelector, preview, imageAnalysis);
 
             } catch (ExecutionException | InterruptedException e) {
                 e.printStackTrace();
@@ -108,41 +130,39 @@ public class ObjectRecognitionActivity extends AppCompatActivity {
         }, ContextCompat.getMainExecutor(this));
     }
 
+    private void switchCamera() {
+        int newLensFacing = currentCameraSelector.getLensFacing() == CameraSelector.LENS_FACING_BACK
+                ? CameraSelector.LENS_FACING_FRONT
+                : CameraSelector.LENS_FACING_BACK;
+
+        startCamera(newLensFacing);
+    }
+
     private void analyzeImage(ImageProxy imageProxy) {
-        @SuppressWarnings("UnsafeOptInUsageError")
-        Image mediaImage = imageProxy.getImage();
-        if (mediaImage != null) {
-            InputImage image = InputImage.fromMediaImage(mediaImage, imageProxy.getImageInfo().getRotationDegrees());
+        if (imageProxy.getImage() != null) {
+            InputImage image = InputImage.fromMediaImage(imageProxy.getImage(), imageProxy.getImageInfo().getRotationDegrees());
 
             objectDetector.process(image)
                     .addOnSuccessListener(detectedObjects -> {
-                        if (!detectedObjects.isEmpty()) {
-                            StringBuilder detectedText = new StringBuilder();
+                        StringBuilder resultText = new StringBuilder();
 
-                            // Iterate over all detected objects
-                            for (DetectedObject obj : detectedObjects) {
-                                List<DetectedObject.Label> labels = obj.getLabels();
-
-                                if (!labels.isEmpty()) {
-                                    // Get the label and build the message
-                                    for (DetectedObject.Label label : labels) {
-                                        String labelText = label.getText();
-                                        detectedText.append("You just scanned a ").append(labelText).append(".\n");
-                                    }
-                                } else {
-                                    detectedText.append("No label found for this object.\n");
+                        for (DetectedObject obj : detectedObjects) {
+                            List<DetectedObject.Label> labels = obj.getLabels();
+                            if (!labels.isEmpty()) {
+                                for (DetectedObject.Label label : labels) {
+                                    resultText.append("Detected: ").append(label.getText()).append("\n");
                                 }
+                            } else {
+                                resultText.append("Detected an object (unlabeled).\n");
                             }
-
-                            updateText(detectedText.toString().trim());
-                        } else {
-                            updateText("No object detected");
                         }
+
+                        updateText(resultText.toString().trim());
                         imageProxy.close();
                     })
                     .addOnFailureListener(e -> {
+                        updateText("Detection failed.");
                         e.printStackTrace();
-                        updateText("Detection error");
                         imageProxy.close();
                     });
         } else {
@@ -151,13 +171,23 @@ public class ObjectRecognitionActivity extends AppCompatActivity {
     }
 
     private void updateText(String text) {
-        runOnUiThread(() -> objectTextView.setText(text));
+        runOnUiThread(() -> {
+            objectTextView.setText(text);
+            textSpeakerHelper.speak(text);
+        });
+    }
+
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        gestureDetector.onTouchEvent(event);
+        return super.onTouchEvent(event);
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        if (requestCode == 100 && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            startCamera();
+        if (requestCode == CAMERA_PERMISSION_CODE && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            startCamera(CameraSelector.LENS_FACING_BACK);
         } else {
             Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show();
         }
@@ -169,5 +199,9 @@ public class ObjectRecognitionActivity extends AppCompatActivity {
         if (cameraExecutor != null) {
             cameraExecutor.shutdown();
         }
+        if (textSpeakerHelper != null) {
+            textSpeakerHelper.shutdown();
+        }
     }
+
 }
