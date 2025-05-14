@@ -1,15 +1,15 @@
 package com.example.smartech;
 
-import com.example.smartech.TextSpeakerHelper;
-
-
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
@@ -46,7 +46,7 @@ public class ObjectRecognitionActivity extends AppCompatActivity {
     private GestureDetectorCompat gestureDetector;
     private CameraSelector currentCameraSelector;
     private TextSpeakerHelper textSpeakerHelper;
-
+    private Vibrator vibrator;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,6 +70,8 @@ public class ObjectRecognitionActivity extends AppCompatActivity {
 
         textSpeakerHelper = new TextSpeakerHelper(this);
 
+        vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+
     }
 
     private void setupGestureDetector() {
@@ -78,6 +80,21 @@ public class ObjectRecognitionActivity extends AppCompatActivity {
             public boolean onDoubleTap(MotionEvent e) {
                 switchCamera();
                 return true;
+            }
+
+            @Override
+            public void onLongPress(MotionEvent e) {
+                // Vibrate the device
+                if (vibrator != null) {
+                    // Check for device API level to decide vibration effect
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        vibrator.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE)); // 500 ms vibration
+                    } else {
+                        vibrator.vibrate(500); // For older versions
+                    }
+                }
+                // Close the camera and go back to HomeActivity when the screen is held.
+                closeCameraAndReturnHome();
             }
         });
     }
@@ -177,6 +194,24 @@ public class ObjectRecognitionActivity extends AppCompatActivity {
         });
     }
 
+    private void closeCameraAndReturnHome() {
+        // Use ProcessCameraProvider to unbind camera
+        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+        cameraProviderFuture.addListener(() -> {
+            try {
+                ProcessCameraProvider cameraProvider = cameraProviderFuture.get(); // Safely get the camera provider after the future is completed
+                cameraProvider.unbindAll(); // Unbind the camera
+            } catch (ExecutionException | InterruptedException e) {
+                e.printStackTrace();
+            }
+        }, ContextCompat.getMainExecutor(this)); // Use the main executor to run this code on the UI thread
+
+        // Return to HomeActivity
+        Intent intent = new Intent(ObjectRecognitionActivity.this, HomeActivity.class);
+        startActivity(intent);
+        finish();  // Optionally finish the current activity
+    }
+
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
@@ -203,5 +238,4 @@ public class ObjectRecognitionActivity extends AppCompatActivity {
             textSpeakerHelper.shutdown();
         }
     }
-
 }
