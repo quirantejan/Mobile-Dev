@@ -130,7 +130,7 @@ public class IntroductionActivity extends AppCompatActivity {
             updateFirebaseName(customName);
             redirectAfterDelay();
         } else if (!awaitingNameCorrection) {
-            customName = firstName;
+            customName = firstName; 
             speak("Thank you, " + firstName + "!");
             nameConfirmed = true;
             redirectAfterDelay();
@@ -176,6 +176,7 @@ public class IntroductionActivity extends AppCompatActivity {
         new Handler().postDelayed(() -> {
             Intent intent = new Intent(IntroductionActivity.this, HomeActivity.class);
             intent.putExtra("customName", customName);
+            // Pass corrected name to HomeActivity
             startActivity(intent);
             finish();
         }, 3000);

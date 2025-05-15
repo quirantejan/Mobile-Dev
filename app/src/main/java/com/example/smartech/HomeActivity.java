@@ -20,6 +20,8 @@ import com.airbnb.lottie.LottieAnimationView;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.auth.FirebaseAuth;
 import java.util.Locale;
+import java.util.Map;
+import java.util.ArrayList;
 
 public class HomeActivity extends AppCompatActivity {
 
@@ -33,7 +35,6 @@ public class HomeActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private String customName = null;
     private String firstName = "";
-    private VoiceCommandRouter voiceCommandRouter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,13 +67,11 @@ public class HomeActivity extends AppCompatActivity {
             }
         });
 
-        voiceCommandRouter = new VoiceCommandRouter(this, mAuth, db, textToSpeech);
-
         voiceAssistantHelper = new VoiceAssistantHelper(this, new VoiceAssistantHelper.Listener() {
             @Override
             public void onCommandReceived(String command) {
                 recognizedText.setText(command);
-                voiceCommandRouter.routeCommand(command, customName != null ? customName : firstName);
+                routeCommand(command);
             }
 
             @Override
@@ -112,6 +111,109 @@ public class HomeActivity extends AppCompatActivity {
         }
     }
 
+    private void greetUser() {
+        String greetingMessage = "Hello, " + (customName != null ? customName : firstName) + "! What can I do for you?";
+        speakOut(greetingMessage);
+    }
+
+    private void routeCommand(String command) {
+        command = command.toLowerCase();
+
+        if ((command.contains("who are") || command.contains("show") ||command.contains("who is") || command.contains("tell")) &&
+                (command.contains("contact") || command.contains("contacts") || command.contains("emergency contact") || command.contains("emergency contacts") || command.contains("my contacts"))) {
+            getEmergencyContacts();
+            return;
+        }
+
+
+        if (matches(command, "daily", "planner") ||
+                command.contains("add task") ||
+                command.contains("add to planner") ||
+                (command.contains("add") || command.contains("task")) ||
+                (command.contains("schedule") || (command.contains("task") || command.contains("something"))) || (command.contains("planner") || command.contains("plan"))) {
+
+            startActivity(new Intent(this, DailyPlannerActivity.class));
+            speakOut("Opening your daily planner.");
+            return;
+        }
+
+        if (command.contains("object recognition") ||
+                matchesAny(command, new String[]{"recognize", "detect", "identify"}, new String[]{"object", "thing", "item"})) {
+            startActivity(new Intent(this, ObjectRecognitionActivity.class));
+            speakOut("Opening object recognition.");
+            return;
+        }
+
+
+        // Help intent
+        if (command.contains("help") || command.contains("assist")) {
+            startActivity(new Intent(this, HelpActivity.class));
+            speakOut("Opening help features.");
+            return;
+        }
+
+
+        if (command.contains("emergency")) {
+            startActivity(new Intent(this, EmergencyActivity.class));
+            speakOut("Opening emergency features.");
+            return;
+        }
+
+        // Name intent
+        if (matchesAny(command, new String[]{"what", "say", "tell"}, new String[]{"my name"})) {
+            speakOut("Your name is " + (customName != null ? customName : firstName));
+            return;
+        }
+
+        speakOut("Sorry, I didn't understand that. Could you please repeat?");
+    }
+
+    private boolean matches(String command, String... keywords) {
+        for (String keyword : keywords) {
+            if (!command.contains(keyword)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean matchesAny(String command, String[] phrases, String[] topics) {
+        for (String phrase : phrases) {
+            for (String topic : topics) {
+                if (command.contains(phrase) && command.contains(topic)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+
+
+    private void getEmergencyContacts() {
+        String userId = mAuth.getCurrentUser().getUid();
+
+        db.collection("users").document(userId).get().addOnSuccessListener(documentSnapshot -> {
+            if (documentSnapshot.exists()) {
+                if (documentSnapshot.contains("emergencyContacts")) {
+                    ArrayList<Map<String, String>> emergencyContacts = (ArrayList<Map<String, String>>) documentSnapshot.get("emergencyContacts");
+                    StringBuilder response = new StringBuilder();
+
+                    response.append("You have ").append(emergencyContacts.size()).append(" emergency contacts. ");
+
+                    for (int i = 0; i < emergencyContacts.size(); i++) {
+                        Map<String, String> contact = emergencyContacts.get(i);
+                        response.append(contact.get("firstName")).append(" ").append(contact.get("lastName"));
+                        if (i < emergencyContacts.size() - 1) response.append(", ");
+                    }
+                    speakOut(response.toString());
+                } else {
+                    speakOut("No emergency contacts found.");
+                }
+            }
+        });
+    }
+
     private void fetchCustomNameFromFirebase() {
         String userId = mAuth.getCurrentUser().getUid();
         db.collection("users").document(userId).get().addOnSuccessListener(documentSnapshot -> {
@@ -127,9 +229,8 @@ public class HomeActivity extends AppCompatActivity {
         });
     }
 
-    private void greetUser() {
-        String greetingMessage = "Hello, " + (customName != null ? customName : firstName) + "! What can I do for you?";
-        textToSpeech.speak(greetingMessage, TextToSpeech.QUEUE_FLUSH, null, null);
+    private void speakOut(String text) {
+        textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
     }
 
     @Override

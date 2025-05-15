@@ -194,24 +194,6 @@ public class EmergencyActivity extends AppCompatActivity implements SensorEventL
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (requestCode == REQUEST_PERMISSIONS) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Location permission granted
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
-                }
-            } else {
-                // Permission denied
-                Toast.makeText(this, "Location permission is required for emergency alerts", Toast.LENGTH_LONG).show();
-            }
-        }
-    }
-
-
-    @Override
     protected void onDestroy() {
         if (textToSpeech != null) {
             textToSpeech.stop();
