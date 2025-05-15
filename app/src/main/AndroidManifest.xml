@@ -31,9 +31,12 @@
             android:name=".EmergencyContactActivity"
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 =======
+=======
+>>>>>>> parent of edbafcd (improved whole UI)
 =======
 >>>>>>> parent of edbafcd (improved whole UI)
             android:exported="true">
@@ -44,6 +47,9 @@
             </intent-filter>
         </activity>
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> parent of edbafcd (improved whole UI)
+=======
 >>>>>>> parent of edbafcd (improved whole UI)
 =======
 >>>>>>> parent of edbafcd (improved whole UI)
@@ -74,6 +80,7 @@
             android:name=".MainActivity"
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -81,6 +88,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+=======
+            android:exported="false"/>
+>>>>>>> parent of edbafcd (improved whole UI)
 =======
             android:exported="false"/>
 >>>>>>> parent of edbafcd (improved whole UI)
