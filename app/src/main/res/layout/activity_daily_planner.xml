@@ -6,6 +6,16 @@
     android:layout_height="match_parent"
     android:background="#FFFFFF">
 
+    <com.example.smartech.AnimatedGradientView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="false"
+        android:focusable="false"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
     <com.airbnb.lottie.LottieAnimationView
         android:id="@+id/micAnimation"
         android:layout_width="300dp"
@@ -21,10 +31,11 @@
 
     <TextView
         android:id="@+id/recognizedText"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:layout_height="55dp"
         android:text="Press and hold to speak"
-        android:textColor="#000000"
+        android:background="@drawable/button_background"
+        android:textColor="#FFFFFF"
         android:textSize="18sp"
         android:padding="16dp"
         android:gravity="center"
