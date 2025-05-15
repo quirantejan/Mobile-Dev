@@ -16,14 +16,11 @@ import android.speech.tts.TextToSpeech;
 import android.view.MotionEvent;
 import android.widget.TextView;
 import android.widget.Toast;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.airbnb.lottie.LottieAnimationView;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.database.*;
 
 import java.util.Locale;
 
@@ -101,7 +98,6 @@ public class EmergencyActivity extends AppCompatActivity implements SensorEventL
             return true;
         });
 
-        // Setup accelerometer for shake detection
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         if (sensorManager != null) {
             accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -125,7 +121,6 @@ public class EmergencyActivity extends AppCompatActivity implements SensorEventL
         }
     }
 
-    // Detect shake
     @Override
     public void onSensorChanged(SensorEvent event) {
         float x = event.values[0];
@@ -141,7 +136,7 @@ public class EmergencyActivity extends AppCompatActivity implements SensorEventL
             float speed = Math.abs(x + y + z - lastX - lastY - lastZ) / diffTime * 10000;
 
             if (speed > SHAKE_THRESHOLD) {
-                speakOut("Shake detected. Sending emergency alert.");
+                speakOut("Shake detected. Sending emergency alert to your contacts.");
                 triggerEmergencyProtocol();
             }
 
@@ -179,28 +174,10 @@ public class EmergencyActivity extends AppCompatActivity implements SensorEventL
     }
 
     private void triggerEmergencyProtocol() {
-        // Replace this with actual location logic
-        String location = "Lat: 00.000, Long: 00.000";
+        String location = "Lat: 00.000, Long: 00.000";  // Dummy location, replace with actual location logic
 
-        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        DatabaseReference contactsRef = FirebaseDatabase.getInstance()
-                .getReference("users").child(userId).child("contacts");
-
-        contactsRef.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                for (DataSnapshot contactSnap : snapshot.getChildren()) {
-                    String name = contactSnap.child("name").getValue(String.class);
-                    String email = contactSnap.child("email").getValue(String.class);
-                    sendEmailToContact(name, email, location);
-                }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                speakOut("Failed to access contacts.");
-            }
-        });
+        sendEmailToContact("Ellie", "elliezptsky@gmail.com", location);
+        sendEmailToContact("Pia", "pia.dinopol@gmail.com", location);
     }
 
     private void sendEmailToContact(String name, String email, String location) {
