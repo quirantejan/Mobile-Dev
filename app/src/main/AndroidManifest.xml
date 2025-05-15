@@ -29,7 +29,18 @@
             android:exported="false" />
         <activity
             android:name=".EmergencyContactActivity"
-            android:exported="false"/>
+<<<<<<< HEAD
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+=======
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+>>>>>>> parent of edbafcd (improved whole UI)
         <activity
             android:name=".LoginActivity"
             android:exported="true"
@@ -42,7 +53,7 @@
             android:exported="false" />
         <activity
             android:name=".DailyPlannerActivity"
-            android:exported="false"/>
+            android:exported="false" />
         <activity
             android:name=".HomeActivity"
             android:exported="false" />
@@ -55,13 +66,17 @@
             android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".MainActivity"
-            android:exported="true" >
+<<<<<<< HEAD
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+=======
+            android:exported="false"/>
+>>>>>>> parent of edbafcd (improved whole UI)
     </application>
 
 </manifest>

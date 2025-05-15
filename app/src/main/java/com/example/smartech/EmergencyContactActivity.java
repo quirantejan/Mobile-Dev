@@ -4,7 +4,6 @@ import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.speech.tts.TextToSpeech;
 import android.text.InputType;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,7 +20,6 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 
 public class EmergencyContactActivity extends AppCompatActivity {
@@ -29,18 +27,13 @@ public class EmergencyContactActivity extends AppCompatActivity {
     private static final int MAX_CONTACTS = 5;
     private int contactCount = 1;
 
-    private LinearLayout emergencyContactsContainer; // For non-inputted contacts
-    private LinearLayout inputtedContactsContainer; // For inputted contacts
+    private LinearLayout emergencyContactsContainer;
     private Button addContactButton;
     private Button removeContactButton;
     private Button doneButton;
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
-
-    private TextToSpeech tts;
-
-    private ArrayList<Map<String, String>> validatedContacts = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,38 +44,25 @@ public class EmergencyContactActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
 
         emergencyContactsContainer = findViewById(R.id.emergencyContactsContainer);
-        inputtedContactsContainer = findViewById(R.id.inputtedContactsContainer);
         addContactButton = findViewById(R.id.addContactButton);
         removeContactButton = findViewById(R.id.removeContactButton);
         doneButton = findViewById(R.id.doneButton);
-
-        // Initialize TTS
-        tts = new TextToSpeech(this, status -> {
-            if (status == TextToSpeech.SUCCESS) {
-                tts.setLanguage(Locale.US);
-            }
-        });
 
         // Initial contact field
         addInitialContactField();
 
         // Button to add a new contact field
         addContactButton.setOnClickListener(v -> {
-            if (validateLastContact()) {
-                moveLastContactToInputted();
-                if (contactCount + validatedContacts.size() < MAX_CONTACTS) {
-                    addNewContactField();
-                } else {
-                    Toast.makeText(this, "Maximum of 5 contacts allowed", Toast.LENGTH_SHORT).show();
-                    speak("You can only add up to five emergency contacts");
-                }
+            if (validateLastContact() && contactCount < MAX_CONTACTS) {
+                addNewContactField();
+            } else if (contactCount >= MAX_CONTACTS) {
+                Toast.makeText(this, "Maximum of 5 contacts allowed", Toast.LENGTH_SHORT).show();
             }
         });
 
         // Button to save all contacts to Firestore
         doneButton.setOnClickListener(v -> {
             if (validateLastContact()) {
-                moveLastContactToInputted();
                 saveContactsToFirestore();
             }
         });
@@ -91,22 +71,12 @@ public class EmergencyContactActivity extends AppCompatActivity {
         removeContactButton.setOnClickListener(v -> {
             if (contactCount > 1) {
                 removeLastContactField();
-            } else if (!validatedContacts.isEmpty()) {
-                // Remove the last validated contact if no non-inputted contacts remain
-                validatedContacts.remove(validatedContacts.size() - 1);
-                updateInputtedContactsDisplay();
-                updateRemoveButtonState();
             }
         });
 
-        // Initialize remove button state
-        updateRemoveButtonState();
-    }
-
-    private void speak(String text) {
-        if (tts != null) {
-            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
-        }
+        // Disable remove button when there's only one contact
+        removeContactButton.setEnabled(false);
+        removeContactButton.setBackgroundTintList(getColorStateList(android.R.color.darker_gray));
     }
 
     private void addInitialContactField() {
@@ -122,9 +92,9 @@ public class EmergencyContactActivity extends AppCompatActivity {
     private void addContactField() {
         // Add number label
         TextView numberLabel = new TextView(this);
-        numberLabel.setText("Contact " + (contactCount + validatedContacts.size()));
+        numberLabel.setText(String.valueOf(contactCount));
         numberLabel.setTextSize(16);
-        numberLabel.setTextColor(getColor(R.color.black));
+        numberLabel.setTextColor(getColor(R.color.black)); // Change to your desired color
         numberLabel.setPadding(0, 8, 0, 4);
         emergencyContactsContainer.addView(numberLabel);
 
@@ -179,7 +149,7 @@ public class EmergencyContactActivity extends AppCompatActivity {
 
     private boolean validateLastContact() {
         int childCount = emergencyContactsContainer.getChildCount();
-        if (childCount < 3) return false;
+        if (childCount < 2) return false;
 
         View nameRowView = emergencyContactsContainer.getChildAt(childCount - 2);
         View emailView = emergencyContactsContainer.getChildAt(childCount - 1);
@@ -190,121 +160,75 @@ public class EmergencyContactActivity extends AppCompatActivity {
         if (nameRow.getChildCount() < 2) return false;
 
         EditText firstName = (EditText) nameRow.getChildAt(0);
-        EditText lastName = (EditText) nameRow.getChildAt(1);
+        EditText secondName = (EditText) nameRow.getChildAt(1);
         EditText email = (EditText) emailView;
 
         String first = firstName.getText().toString().trim();
-        String last = lastName.getText().toString().trim();
+        String second = secondName.getText().toString().trim();
         String emailStr = email.getText().toString().trim();
 
         if (!first.matches("^[A-Za-z]{2,}$")) {
             firstName.setError("At least 2 letters");
-            speak("Please enter a valid first name.");
             return false;
         }
 
-        if (!last.matches("^[A-Za-z]{2,}$")) {
-            lastName.setError("At least 2 letters");
-            speak("Please enter a valid last name.");
+        if (!second.matches("^[A-Za-z]{2,}$")) {
+            secondName.setError("At least 2 letters");
             return false;
         }
 
         if (!emailStr.contains("@")) {
             email.setError("Enter a valid email");
-            speak("Please enter a valid email address.");
             return false;
         }
 
         return true;
     }
 
-    private void moveLastContactToInputted() {
-        int childCount = emergencyContactsContainer.getChildCount();
-        if (childCount < 3) return;
-
-        View numberLabelView = emergencyContactsContainer.getChildAt(childCount - 3);
-        View nameRowView = emergencyContactsContainer.getChildAt(childCount - 2);
-        View emailView = emergencyContactsContainer.getChildAt(childCount - 1);
-
-        if (!(nameRowView instanceof LinearLayout) || !(emailView instanceof EditText)) return;
-
-        LinearLayout nameRow = (LinearLayout) nameRowView;
-        EditText firstName = (EditText) nameRow.getChildAt(0);
-        EditText lastName = (EditText) nameRow.getChildAt(1);
-        EditText email = (EditText) emailView;
-
-        Map<String, String> contact = new HashMap<>();
-        contact.put("firstName", firstName.getText().toString().trim());
-        contact.put("lastName", lastName.getText().toString().trim());
-        contact.put("email", email.getText().toString().trim());
-
-        validatedContacts.add(contact);
-
-        // Remove from non-inputted container
-        emergencyContactsContainer.removeView(numberLabelView);
-        emergencyContactsContainer.removeView(nameRowView);
-        emergencyContactsContainer.removeView(emailView);
-        contactCount--;
-
-        // Update inputted contacts display
-        updateInputtedContactsDisplay();
-
-        // Update button state
-        updateRemoveButtonState();
-    }
-
-    private void updateInputtedContactsDisplay() {
-        inputtedContactsContainer.removeAllViews();
-
-        if (validatedContacts.isEmpty()) {
-            findViewById(R.id.inputtedContactsCard).setVisibility(View.GONE);
-            return;
-        }
-
-        findViewById(R.id.inputtedContactsCard).setVisibility(View.VISIBLE);
-
-        for (int i = 0; i < validatedContacts.size(); i++) {
-            Map<String, String> contact = validatedContacts.get(i);
-
-            // Add number label
-            TextView numberLabel = new TextView(this);
-            numberLabel.setText("Contact " + (i + 1));
-            numberLabel.setTextSize(16);
-            numberLabel.setTextColor(getColor(R.color.black));
-            numberLabel.setPadding(0, 8, 0, 4);
-            inputtedContactsContainer.addView(numberLabel);
-
-            // Add name
-            TextView nameText = new TextView(this);
-            nameText.setText(contact.get("firstName") + " " + contact.get("lastName"));
-            nameText.setTextSize(16);
-            nameText.setTextColor(getColor(R.color.black));
-            nameText.setPadding(0, 0, 0, 8);
-            inputtedContactsContainer.addView(nameText);
-
-            // Add email
-            TextView emailText = new TextView(this);
-            emailText.setText(contact.get("email"));
-            emailText.setTextSize(16);
-            emailText.setTextColor(getColor(R.color.black));
-            emailText.setPadding(0, 0, 0, 16);
-            inputtedContactsContainer.addView(emailText);
-        }
-    }
-
     private void saveContactsToFirestore() {
         String userId = mAuth.getCurrentUser().getUid();
+        ArrayList<Map<String, String>> contactsList = new ArrayList<>();
 
-        db.collection("users").document(userId).update("emergencyContacts", validatedContacts)
+        int childIndex = 0;
+
+        for (int i = 0; i < contactCount; i++) {
+            // Skip number label (TextView)
+            childIndex++; // this skips the label
+
+            if (childIndex + 1 >= emergencyContactsContainer.getChildCount()) break;
+
+            View nameRowView = emergencyContactsContainer.getChildAt(childIndex);
+            View emailView = emergencyContactsContainer.getChildAt(childIndex + 1);
+
+            if (!(nameRowView instanceof LinearLayout) || !(emailView instanceof EditText)) {
+                childIndex += 2;
+                continue;
+            }
+
+            LinearLayout nameRow = (LinearLayout) nameRowView;
+            EditText firstName = (EditText) nameRow.getChildAt(0);
+            EditText lastName = (EditText) nameRow.getChildAt(1);
+            EditText email = (EditText) emailView;
+
+            Map<String, String> contact = new HashMap<>();
+            contact.put("firstName", firstName.getText().toString().trim());
+            contact.put("lastName", lastName.getText().toString().trim());
+            contact.put("email", email.getText().toString().trim());
+
+            contactsList.add(contact);
+
+            childIndex += 2;
+        }
+
+        db.collection("users").document(userId).update("emergencyContacts", contactsList)
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(EmergencyContactActivity.this, "Contacts saved successfully!", Toast.LENGTH_SHORT).show();
-                    speak("Your emergency contacts have been saved successfully.");
+                    // Navigate to LoginActivity instead of HomeActivity
                     startActivity(new Intent(EmergencyContactActivity.this, LoginActivity.class));
                     finish();
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(EmergencyContactActivity.this, "Error saving contacts: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    speak("Failed to save emergency contacts.");
                 });
     }
 
@@ -321,21 +245,13 @@ public class EmergencyContactActivity extends AppCompatActivity {
     }
 
     private void updateRemoveButtonState() {
-        if (contactCount <= 1 && validatedContacts.isEmpty()) {
+        if (contactCount <= 1) {
             removeContactButton.setEnabled(false);
             removeContactButton.setBackgroundTintList(getColorStateList(android.R.color.darker_gray));
         } else {
             removeContactButton.setEnabled(true);
-            removeContactButton.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#2D4FB2")));
+            removeContactButton.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#2D4FB2"))); // Use hex color code
+            // Replace with your primary color
         }
-    }
-
-    @Override
-    protected void onDestroy() {
-        if (tts != null) {
-            tts.stop();
-            tts.shutdown();
-        }
-        super.onDestroy();
     }
 }
