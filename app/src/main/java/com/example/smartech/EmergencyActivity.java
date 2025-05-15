@@ -7,26 +7,34 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.speech.tts.TextToSpeech;
-import android.view.MotionEvent;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.airbnb.lottie.LottieAnimationView;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class EmergencyActivity extends AppCompatActivity implements SensorEventListener {
 
-    private static final int REQUEST_RECORD_AUDIO_PERMISSION = 1;
+    private static final int REQUEST_PERMISSIONS = 1;
     private VoiceAssistantHelper voiceAssistantHelper;
     private LottieAnimationView micAnimation;
     private TextView recognizedText;
@@ -39,6 +47,12 @@ public class EmergencyActivity extends AppCompatActivity implements SensorEventL
     private long lastShakeTime = 0;
     private static final int SHAKE_THRESHOLD = 800;
 
+    private LocationManager locationManager;
+    private String currentLocation = "Location not available";
+
+    private FirebaseFirestore db;
+    private FirebaseAuth mAuth;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -48,10 +62,14 @@ public class EmergencyActivity extends AppCompatActivity implements SensorEventL
         recognizedText = findViewById(R.id.recognizedText);
         mainLayout = findViewById(R.id.main);
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO},
-                    REQUEST_RECORD_AUDIO_PERMISSION);
+        db = FirebaseFirestore.getInstance();
+        mAuth = FirebaseAuth.getInstance();
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.RECORD_AUDIO, Manifest.permission.ACCESS_FINE_LOCATION},
+                    REQUEST_PERMISSIONS);
         }
 
         textToSpeech = new TextToSpeech(this, status -> {
@@ -87,11 +105,11 @@ public class EmergencyActivity extends AppCompatActivity implements SensorEventL
 
         mainLayout.setOnTouchListener((v, event) -> {
             switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
+                case android.view.MotionEvent.ACTION_DOWN:
                     vibrate();
                     voiceAssistantHelper.startListening();
                     break;
-                case MotionEvent.ACTION_UP:
+                case android.view.MotionEvent.ACTION_UP:
                     voiceAssistantHelper.stopListening();
                     break;
             }
@@ -102,7 +120,19 @@ public class EmergencyActivity extends AppCompatActivity implements SensorEventL
         if (sensorManager != null) {
             accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         }
+
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+        }
     }
+
+    private final LocationListener locationListener = new LocationListener() {
+        @Override
+        public void onLocationChanged(@NonNull Location location) {
+            currentLocation = "Lat: " + location.getLatitude() + ", Long: " + location.getLongitude();
+        }
+    };
 
     private void speakOut(String text) {
         if (textToSpeech != null) {
@@ -147,8 +177,7 @@ public class EmergencyActivity extends AppCompatActivity implements SensorEventL
     }
 
     @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-    }
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
     @Override
     protected void onResume() {
@@ -165,6 +194,24 @@ public class EmergencyActivity extends AppCompatActivity implements SensorEventL
     }
 
     @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == REQUEST_PERMISSIONS) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Location permission granted
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+                }
+            } else {
+                // Permission denied
+                Toast.makeText(this, "Location permission is required for emergency alerts", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+
+    @Override
     protected void onDestroy() {
         if (textToSpeech != null) {
             textToSpeech.stop();
@@ -174,10 +221,25 @@ public class EmergencyActivity extends AppCompatActivity implements SensorEventL
     }
 
     private void triggerEmergencyProtocol() {
-        String location = "Lat: 00.000, Long: 00.000";  // Dummy location, replace with actual location logic
-
-        sendEmailToContact("Ellie", "elliezptsky@gmail.com", location);
-        sendEmailToContact("Pia", "pia.dinopol@gmail.com", location);
+        String userId = mAuth.getCurrentUser().getUid();
+        db.collection("users").document(userId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        List<Map<String, String>> contacts = (List<Map<String, String>>) documentSnapshot.get("emergencyContacts");
+                        if (contacts != null) {
+                            for (Map<String, String> contact : contacts) {
+                                String name = contact.get("firstName") + " " + contact.get("lastName");
+                                String email = contact.get("email");
+                                sendEmailToContact(name, email, currentLocation);
+                            }
+                        } else {
+                            speakOut("No emergency contacts found.");
+                        }
+                    } else {
+                        speakOut("User data not found.");
+                    }
+                })
+                .addOnFailureListener(e -> speakOut("Failed to retrieve contacts: " + e.getMessage()));
     }
 
     private void sendEmailToContact(String name, String email, String location) {
