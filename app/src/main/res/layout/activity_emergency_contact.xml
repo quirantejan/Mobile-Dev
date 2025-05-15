@@ -4,7 +4,7 @@
     android:id="@+id/mainEmergency"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg"
+    android:background="@drawable/bg4"
     android:padding="24dp">
 
     <LinearLayout
@@ -13,6 +13,7 @@
         android:orientation="vertical"
         android:gravity="center_horizontal">
 
+        <!-- Title CardView -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -34,8 +35,45 @@
                     android:text="Set Emergency Contacts"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:textColor="#272477"
-                    android:layout_marginBottom="12dp" />
+                    android:textColor="#272477" />
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Inputted Contacts CardView -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/inputtedContactsCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="#FFFFFF"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/inputtedContactsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp" />
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- Non-Inputted Contacts CardView -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="#FFFFFF"
+            android:layout_marginBottom="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
 
                 <LinearLayout
                     android:id="@+id/emergencyContactsContainer"
@@ -49,7 +87,7 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center"
-                    android:layout_marginBottom="16dp">
+                    android:layout_marginTop="16dp">
 
                     <Button
                         android:id="@+id/addContactButton"
@@ -72,17 +110,18 @@
                         android:minHeight="48dp" />
                 </LinearLayout>
 
-                <Button
-                    android:id="@+id/doneButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Done"
-                    android:backgroundTint="#2D4FB2"
-                    android:textColor="#FFFFFF"
-                    android:layout_marginTop="16dp" />
-
             </LinearLayout>
         </androidx.cardview.widget.CardView>
+
+        <!-- Done Button (Standalone) -->
+        <Button
+            android:id="@+id/doneButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Done"
+            android:backgroundTint="#2D4FB2"
+            android:minHeight="60dp"
+            android:layout_marginTop="16dp" />
 
     </LinearLayout>
 </ScrollView>
